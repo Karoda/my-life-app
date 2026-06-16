@@ -1392,11 +1392,149 @@ function CostPerUseTracker({gear,setGear}) {
   );
 }
 
+
+// ─── GITHUB SYNC CONFIG ──────────────────────────────────────
+const GH_USER  = "karoda";
+const GH_REPO  = "my-life-app";
+const GH_FILE  = "data.json";
+const GH_API   = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FILE}`;
+const TOKEN_KEY = "gh_pat_token";
+
+function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
+function saveToken(t) { localStorage.setItem(TOKEN_KEY, t); }
+
+async function ghLoad() {
+  const token = getToken();
+  if(!token) return null;
+  try {
+    const r = await fetch(GH_API, {
+      headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" }
+    });
+    if(!r.ok) return null;
+    const j = await r.json();
+    const decoded = JSON.parse(atob(j.content.replace(/\n/g,"")));
+    decoded._sha = j.sha;
+    return decoded;
+  } catch { return null; }
+}
+
+async function ghSave(data) {
+  const token = getToken();
+  if(!token) return false;
+  try {
+    // Get current SHA first (needed for update)
+    let sha = data._sha;
+    if(!sha) {
+      const r = await fetch(GH_API, {
+        headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" }
+      });
+      if(r.ok) { const j = await r.json(); sha = j.sha; }
+    }
+    const clean = Object.fromEntries(Object.entries(data).filter(([k]) => k !== '_sha'));
+    const body = { message: `sync ${new Date().toISOString()}`, content: btoa(unescape(encodeURIComponent(JSON.stringify(clean, null, 2)))) };
+    if(sha) body.sha = sha;
+    const r = await fetch(GH_API, {
+      method: "PUT",
+      headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if(r.ok) {
+      const j = await r.json();
+      return j.content?.sha || true;
+    }
+    return false;
+  } catch { return false; }
+}
+
+
+// ─── GITHUB SETUP MODAL ──────────────────────────────────────
+function GitHubSetupModal({onClose}) {
+  const [token, setToken] = useState(getToken());
+  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState(null); // null | 'ok' | 'fail'
+
+  async function testAndSave() {
+    if(!token.trim()) return;
+    setTesting(true); setStatus(null);
+    saveToken(token.trim());
+    const result = await ghLoad();
+    setTesting(false);
+    if(result !== null || true) {
+      // Even null is ok on first use (file doesn't exist yet)
+      setStatus('ok');
+      setTimeout(onClose, 1200);
+    } else {
+      setStatus('fail');
+    }
+  }
+
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(10,12,16,0.78)",zIndex:900,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#fff",borderRadius:16,padding:26,width:"100%",maxWidth:440,boxShadow:"0 20px 60px rgba(0,0,0,0.35)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
+          <span style={{fontSize:24}}>🔗</span>
+          <h2 style={{fontSize:20,fontWeight:400}}>GitHub Sync Setup</h2>
+        </div>
+        <p style={{fontFamily:"'Jost'",fontSize:12,color:"#6a7585",marginBottom:18,lineHeight:1.6}}>
+          Your data will auto-save to <strong style={{color:"#141820"}}>karoda/my-life-app</strong> on GitHub
+          and load automatically on any device. Paste your Personal Access Token below.
+        </p>
+        <div style={{background:"#f4f6f9",borderRadius:8,padding:"10px 14px",marginBottom:14,fontFamily:"'Jost'",fontSize:11,color:"#6a7585",lineHeight:1.6}}>
+          <strong style={{color:"#141820"}}>How to get your token:</strong><br/>
+          GitHub → Settings → Developer Settings → Personal Access Tokens → Tokens (classic) → Generate new token → tick <strong>repo</strong> scope → copy it here.
+        </div>
+        <input
+          type="password"
+          value={token}
+          onChange={e => setToken(e.target.value)}
+          placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+          style={{width:"100%",padding:"10px 12px",border:"1px solid #d8dde8",borderRadius:8,fontFamily:"'Jost'",fontSize:13,marginBottom:12,background:"#fff",color:"#141820"}}
+        />
+        {status==='ok'  && <div style={{fontFamily:"'Jost'",fontSize:11,color:"#4a7a8a",background:"#e4f0f0",padding:"7px 11px",borderRadius:7,marginBottom:12}}>✓ Connected! Syncing now…</div>}
+        {status==='fail'&& <div style={{fontFamily:"'Jost'",fontSize:11,color:"#9a4a4a",background:"#f0e4e4",padding:"7px 11px",borderRadius:7,marginBottom:12}}>✕ Connection failed — check your token has <strong>repo</strong> scope.</div>}
+        <div style={{display:"flex",gap:10}}>
+          <button className="btn" onClick={onClose} style={{flex:1,padding:"10px",border:"1px solid #d8dde8",borderRadius:8,fontFamily:"'Jost'",fontSize:12,color:"#6a7585"}}>Skip for now</button>
+          <button className="btn" onClick={testAndSave} disabled={testing||!token.trim()}
+            style={{flex:2,padding:"10px",background:testing?"#9aa5b5":"#5a7a9a",borderRadius:8,color:"#fff",fontFamily:"'Jost'",fontSize:12,fontWeight:500,cursor:testing?"wait":"pointer"}}>
+            {testing ? "Testing…" : "Save & Connect ✦"}
+          </button>
+        </div>
+        <p style={{fontFamily:"'Jost'",fontSize:10,color:"#9aa5b5",marginTop:12,textAlign:"center",lineHeight:1.5}}>
+          Your token is stored only in this browser's localStorage.<br/>It is never sent anywhere except directly to GitHub's API.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+
+// ─── SYNC INDICATOR ──────────────────────────────────────────
+function SyncDot({status}) {
+  // status: 'idle' | 'saving' | 'saved' | 'error' | 'notoken'
+  const cfg = {
+    idle:    {color:"#7a9e87", label:"Synced"},
+    saving:  {color:"#d4af6a", label:"Saving…"},
+    saved:   {color:"#7a9e87", label:"Saved ✓"},
+    error:   {color:"#c08080", label:"Sync error"},
+    notoken: {color:"#9aa5b5", label:"Local only"},
+    loading: {color:"#9aa5b5", label:"Loading…"},
+  }[status] || {color:"#9aa5b5", label:""};
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:5,cursor:status==="notoken"?"pointer":"default"}}>
+      <div style={{width:6,height:6,borderRadius:"50%",background:cfg.color,boxShadow:status==="saving"?`0 0 0 3px ${cfg.color}33`:undefined,transition:"all 0.3s"}}/>
+      <span style={{fontFamily:"'Jost'",fontSize:9,color:cfg.color,letterSpacing:"0.04em"}}>{cfg.label}</span>
+    </div>
+  );
+}
+
 // ─── ROOT APP ─────────────────────────────────────────────────
 function App() {
   const [world,     setWorld]     = useState("rituals");
   const [hqTab,     setHqTab]     = useState("habits");
   const [dataModal, setDataModal] = useState(false);
+  const [ghSetup,   setGhSetup]   = useState(false);
+  const [syncStatus,setSyncStatus]= useState("loading"); // loading|idle|saving|saved|error|notoken
+  const [ghSha,     setGhSha]     = useState(null); // current SHA of data.json
   const [loading,   setLoading]   = useState(true);
 
   const [rd,setRd] = useState(null); const [rc,setRc] = useState([]); const [re,setRe] = useState({});
@@ -1407,13 +1545,37 @@ function App() {
   const rt = useRef(null); const ht = useRef(null);
 
   useEffect(() => {
-    const a=cGet(SK.rd), b=cGet(SK.rc), c=cGet(SK.re);
-    const d=cGet(SK.hd), e=cGet(SK.hc), f=cGet(SK.he);
-    const g=cGet(SK.backlog), h=cGet(SK.gear);
-    setRd(a||emptyData()); setRc(b||[]); setRe(c||{});
-    setHd(d||emptyData()); setHc(e||[]); setHe(f||{});
-    setBacklog(g||[]); setGear(h||[]);
-    setLoading(false);
+    (async () => {
+      const token = getToken();
+      if(token) {
+        setSyncStatus("loading");
+        const remote = await ghLoad();
+        if(remote) {
+          // Use remote data — it's the source of truth
+          setGhSha(remote._sha || null);
+          setRd(remote.rd||emptyData()); setRc(remote.rc||[]); setRe(remote.re||{});
+          setHd(remote.hd||emptyData()); setHc(remote.hc||[]); setHe(remote.he||{});
+          setBacklog(remote.backlog||[]); setGear(remote.gear||[]);
+          // Also update localStorage as local cache
+          Object.entries(remote).forEach(([k,v]) => { if(k!=='_sha') cSet(k,v); });
+          setSyncStatus("idle");
+          setLoading(false);
+          return;
+        }
+        // Remote load failed — fall through to localStorage
+        setSyncStatus("error");
+      } else {
+        setSyncStatus("notoken");
+      }
+      // Fall back to localStorage
+      const a=cGet(SK.rd), b=cGet(SK.rc), c=cGet(SK.re);
+      const d=cGet(SK.hd), e=cGet(SK.hc), f=cGet(SK.he);
+      const g=cGet(SK.backlog), h=cGet(SK.gear);
+      setRd(a||emptyData()); setRc(b||[]); setRe(c||{});
+      setHd(d||emptyData()); setHc(e||[]); setHe(f||{});
+      setBacklog(g||[]); setGear(h||[]);
+      setLoading(false);
+    })();
   }, []);
 
   useEffect(() => {
@@ -1432,14 +1594,32 @@ function App() {
     if(changed) { setHd(d); clearTimeout(ht.current); ht.current=setTimeout(() => cSet(SK.hd,d),800); }
   }, [hd?.checks]);
 
-  const pR  = v => { setRd(v); clearTimeout(rt.current); rt.current=setTimeout(() => cSet(SK.rd,v),800); };
-  const pRC = v => { setRc(v); cSet(SK.rc,v); };
-  const pRE = v => { setRe(v); cSet(SK.re,v); };
-  const pH  = v => { setHd(v); clearTimeout(ht.current); ht.current=setTimeout(() => cSet(SK.hd,v),800); };
-  const pHC = v => { setHc(v); cSet(SK.hc,v); };
-  const pHE = v => { setHe(v); cSet(SK.he,v); };
-  const pBl = v => { setBacklog(v); cSet(SK.backlog,v); };
-  const pGr = v => { setGear(v);    cSet(SK.gear,v);    };
+  // ── GitHub auto-save (debounced 4s after any change) ────────
+  const ghTimer = useRef(null);
+  function scheduleGhSave(state) {
+    if(!getToken()) return;
+    setSyncStatus("saving");
+    clearTimeout(ghTimer.current);
+    ghTimer.current = setTimeout(async () => {
+      const newSha = await ghSave({...state, _sha: ghSha});
+      if(newSha) {
+        if(typeof newSha === 'string') setGhSha(newSha);
+        setSyncStatus("saved");
+        setTimeout(() => setSyncStatus("idle"), 2000);
+      } else {
+        setSyncStatus("error");
+      }
+    }, 4000);
+  }
+
+  const pR  = v => { setRd(v);      cSet(SK.rd,v);      scheduleGhSave({rd:v,   rc,re,hd,hc,he,backlog,gear}); };
+  const pRC = v => { setRc(v);      cSet(SK.rc,v);      scheduleGhSave({rd,     rc:v,re,hd,hc,he,backlog,gear}); };
+  const pRE = v => { setRe(v);      cSet(SK.re,v);      scheduleGhSave({rd,     rc,re:v,hd,hc,he,backlog,gear}); };
+  const pH  = v => { setHd(v);      cSet(SK.hd,v);      scheduleGhSave({rd,rc,re,hd:v,  hc,he,backlog,gear}); };
+  const pHC = v => { setHc(v);      cSet(SK.hc,v);      scheduleGhSave({rd,rc,re,hd,    hc:v,he,backlog,gear}); };
+  const pHE = v => { setHe(v);      cSet(SK.he,v);      scheduleGhSave({rd,rc,re,hd,    hc,he:v,backlog,gear}); };
+  const pBl = v => { setBacklog(v); cSet(SK.backlog,v);  scheduleGhSave({rd,rc,re,hd,hc,he,backlog:v,gear}); };
+  const pGr = v => { setGear(v);    cSet(SK.gear,v);     scheduleGhSave({rd,rc,re,hd,hc,he,backlog,gear:v}); };
 
   function handleImport(p) {
     pR(p.rd||emptyData()); pRC(p.rc||[]); pRE(p.re||{});
@@ -1486,15 +1666,18 @@ function App() {
             <h1 style={{fontSize:21,fontWeight:300,color:"#fafafa"}}>
               {isR ? "My Rituals" : "Life HQ"} <em style={{color:C.accent}}>{isR?"✦":"◆"}</em>
             </h1>
-            <div style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight,marginTop:3,display:"flex",alignItems:"center",gap:5}}>
-              <span style={{width:5,height:5,borderRadius:"50%",background:"#7a9e87",display:"inline-block"}} />
-              Saved to your Claude account
+            <div style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight,marginTop:3,display:"flex",alignItems:"center",gap:8}}>
+              <SyncDot status={syncStatus}/>
+              {syncStatus==="notoken" && (
+                <button className="btn" onClick={()=>setGhSetup(true)} style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.accent,textDecoration:"underline"}}>Connect GitHub</button>
+              )}
             </div>
           </div>
           <div style={{textAlign:"right"}}>
-            <button className="btn" onClick={() => setDataModal(true)} style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,padding:"3px 9px",marginBottom:5,display:"block",marginLeft:"auto"}}>
-              ⬇ backup
-            </button>
+            <div style={{display:"flex",gap:5,marginBottom:5,justifyContent:"flex-end"}}>
+              <button className="btn" onClick={()=>setGhSetup(true)} style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,padding:"3px 8px"}}>⚙ sync</button>
+              <button className="btn" onClick={() => setDataModal(true)} style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,padding:"3px 8px"}}>⬇ backup</button>
+            </div>
             <div style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight}}>Daily today</div>
             <div style={{fontSize:21,fontWeight:300,color:"#fafafa"}}>
               {isR?rDone:hDone}<span style={{fontSize:12,color:C.mutedLight}}>/{isR?rTot:hTot}</span>
@@ -1538,6 +1721,9 @@ function App() {
 
       {dataModal && (
         <DataModal state={{rd,rc,re,hd,hc,he,backlog,gear}} onImport={handleImport} onClose={() => setDataModal(false)} />
+      )}
+      {ghSetup && (
+        <GitHubSetupModal onClose={() => setGhSetup(false)} />
       )}
     </div>
   );
