@@ -1,0 +1,1552 @@
+[life_app.html](https://github.com/user-attachments/files/28986699/life_app.html)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Rituals & Life HQ</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: 'Cormorant Garamond', Georgia, serif; background: #faf7f3; }
+  #root { max-width: 880px; margin: 0 auto; min-height: 100vh; }
+  .btn { cursor: pointer; border: none; background: none; font-family: inherit; padding: 0; }
+  .row { transition: background 0.1s; cursor: pointer; }
+  .row:hover { background: rgba(0,0,0,0.02); }
+  input, select, textarea { font-family: 'Jost', sans-serif; outline: none; box-sizing: border-box; }
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-thumb { background: #c8cdd8; border-radius: 2px; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const GOLD = {
+  accent:"#b5975a", accentLight:"#d4af6a", accentPale:"#f5eed8",
+  dark:"#1a1814", dark2:"#2d2720", dark3:"#3a3028",
+  bg:"#faf7f3", soft:"#f5f0ea", border:"#e8e0d4",
+  muted:"#8a7f72", mutedLight:"#b0a898",
+  green:"#7a9e87", greenPale:"#e8f2ec",
+  purple:"#8a7aae", purplePale:"#ede8f5",
+  rose:"#c08080", rosePale:"#f5eaea",
+  mastered:"#5a8a6a", teal:"#5a8a8a", tealPale:"#e8f2f2", danger:"#b05050",
+};
+const SLATE = {
+  accent:"#5a7a9a", accentLight:"#7a9aba", accentPale:"#e8f0f8",
+  dark:"#141820", dark2:"#1e2530", dark3:"#28303c",
+  bg:"#f4f6f9", soft:"#edf0f5", border:"#d8dde8",
+  muted:"#6a7585", mutedLight:"#9aa5b5",
+  green:"#5a8a6a", greenPale:"#e4f0e8",
+  purple:"#7a6a9a", purplePale:"#ede8f5",
+  rose:"#9a6a6a", rosePale:"#f0e4e4",
+  mastered:"#4a7a8a", teal:"#4a8a8a", tealPale:"#e4f0f0", danger:"#9a4a4a",
+};
+
+
+const RITUALS = [
+  {id:"d01",freq:"daily",section:"Morning",emoji:"🫧",label:"Oil pulling / tongue scraping",mc:30},
+  {id:"d02",freq:"daily",section:"Morning",emoji:"✨",label:"Gentle cleanser",mc:30},
+  {id:"d03",freq:"daily",section:"Morning",emoji:"☀️",label:"Vitamin C serum + SPF 50",mc:30},
+  {id:"d04",freq:"daily",section:"Morning",emoji:"💄",label:"Tinted lip balm + brow gel",mc:30},
+  {id:"d05",freq:"daily",section:"Morning",emoji:"🌸",label:"Signature perfume",mc:30},
+  {id:"d06",freq:"daily",section:"Morning",emoji:"💇",label:"Polished hair style",mc:30},
+  {id:"d07",freq:"daily",section:"Morning",emoji:"👗",label:"Outfit mirror check + lint roll",mc:30},
+  {id:"d08",freq:"daily",section:"Evening",emoji:"🧴",label:"Double cleanse",mc:30},
+  {id:"d09",freq:"daily",section:"Evening",emoji:"💊",label:"Serum (niacinamide / peptides)",mc:30},
+  {id:"d10",freq:"daily",section:"Evening",emoji:"🌙",label:"Rich moisturiser + eye cream",mc:30},
+  {id:"d11",freq:"daily",section:"Evening",emoji:"💋",label:"Lip mask overnight",mc:30},
+  {id:"d12",freq:"daily",section:"Evening",emoji:"🧖",label:"Body lotion on damp skin",mc:30},
+  {id:"d13",freq:"daily",section:"Evening",emoji:"💅",label:"Cuticle oil on all nails",mc:30},
+  {id:"d14",freq:"daily",section:"Fitness",emoji:"🧘",label:"Posture check + 10 min stretch",mc:30},
+  {id:"d15",freq:"daily",section:"Fitness",emoji:"🚶",label:"10,000 steps",mc:30},
+  {id:"d16",freq:"daily",section:"Skin",emoji:"🌀",label:"Face massage (gua sha / hands)",mc:30},
+  {id:"d17",freq:"daily",section:"Nutrition",emoji:"💧",label:"2–2.5L water + electrolytes",mc:30},
+  {id:"d18",freq:"daily",section:"Nutrition",emoji:"🥗",label:"Collagen + Omega-3 + supplements",mc:30},
+  {id:"d19",freq:"daily",section:"Home",emoji:"🪞",label:"Vanity / bathroom tidy",mc:30},
+  {id:"e01",freq:"everyNdays",everyN:2,section:"Body",emoji:"🪥",label:"Dry brushing (pre-shower)",mc:45},
+  {id:"w01",freq:"xperweek",timesPerWeek:3,section:"Fitness",emoji:"🧘",label:"Pilates / yoga session",mc:13},
+  {id:"w02",freq:"xperweek",timesPerWeek:2,section:"Fitness",emoji:"💪",label:"Strength training session",mc:13},
+  {id:"w03",freq:"xperweek",timesPerWeek:4,section:"Fitness",emoji:"🏊",label:"Triathlon training (swim/bike/run)",mc:13},
+  {id:"wk1",freq:"weekly",section:"Hair",emoji:"💆",label:"Deep hair mask",mc:13},
+  {id:"wk2",freq:"weekly",section:"Skin",emoji:"🫙",label:"Face mask (hydrating or clay)",mc:13},
+  {id:"wk3",freq:"weekly",section:"Body",emoji:"🛁",label:"Body exfoliation scrub",mc:13},
+  {id:"wk4",freq:"weekly",section:"Body",emoji:"🪒",label:"Shave / wax — legs & underarms",mc:13},
+  {id:"wk5",freq:"weekly",section:"Nails",emoji:"💅",label:"Nail file, buff & polish refresh",mc:13},
+  {id:"wk6",freq:"weekly",section:"Body",emoji:"🦶",label:"Foot care — pumice + thick cream",mc:13},
+  {id:"wk7",freq:"weekly",section:"Wardrobe",emoji:"👗",label:"Wardrobe reset + outfit planning",mc:13},
+  {id:"wk8",freq:"weekly",section:"Nutrition",emoji:"🛒",label:"Grocery & meal prep",mc:13},
+  {id:"wk9",freq:"weekly",section:"Home",emoji:"🏠",label:"Home deep clean + declutter",mc:13},
+  {id:"m01",freq:"monthly",section:"Hair",emoji:"💇",label:"Professional blow-dry / treatment",mc:12},
+  {id:"m02",freq:"monthly",section:"Brows",emoji:"🤨",label:"Eyebrow threading / waxing",mc:12},
+  {id:"m03",freq:"monthly",section:"Lashes",emoji:"👁️",label:"Lash tint or lift",mc:12},
+  {id:"m04",freq:"monthly",section:"Nails",emoji:"💅",label:"Professional manicure + gel",mc:12},
+  {id:"m05",freq:"monthly",section:"Nails",emoji:"🦶",label:"Professional pedicure",mc:12},
+  {id:"m06",freq:"monthly",section:"Skin",emoji:"🧖",label:"Facial / professional skin treatment",mc:12},
+  {id:"m07",freq:"monthly",section:"Body",emoji:"🪷",label:"Full body wax or laser session",mc:12},
+  {id:"q01",freq:"quarterly",section:"Health",emoji:"🦷",label:"Dentist / teeth cleaning",mc:4},
+  {id:"q02",freq:"quarterly",section:"Wardrobe",emoji:"🛍️",label:"Wardrobe seasonal audit + shop",mc:4},
+  {id:"q03",freq:"quarterly",section:"Wellbeing",emoji:"📊",label:"Quarterly routine review",mc:4},
+  {id:"a01",freq:"annual",section:"Health",emoji:"🩺",label:"Full health check / blood panel",mc:3},
+  {id:"a02",freq:"annual",section:"Wellbeing",emoji:"✨",label:"Annual goals & style vision reset",mc:3},
+];
+
+
+const HQ = [
+  {id:"hd01",freq:"daily",section:"Clarity",emoji:"📓",label:"Morning intention (1 sentence)",mc:30},
+  {id:"hd02",freq:"daily",section:"Clarity",emoji:"🌆",label:"Evening brain dump / reflection",mc:30},
+  {id:"hd03",freq:"daily",section:"Clarity",emoji:"📵",label:"No phone first 30 min",mc:30},
+  {id:"hd04",freq:"daily",section:"Clarity",emoji:"🎯",label:"Single daily priority set",mc:30},
+  {id:"hd05",freq:"daily",section:"Learning",emoji:"📖",label:"Read 20+ pages / 20 min",mc:30},
+  {id:"hd06",freq:"daily",section:"Learning",emoji:"🎧",label:"One learning input (podcast/article)",mc:30},
+  {id:"hw01",freq:"xperweek",timesPerWeek:1,section:"Productivity",emoji:"🗓️",label:"Weekly planning session",mc:13},
+  {id:"hw02",freq:"xperweek",timesPerWeek:1,section:"Finance",emoji:"💰",label:"Weekly finance check-in",mc:13},
+  {id:"hw03",freq:"xperweek",timesPerWeek:1,section:"Fun",emoji:"🎮",label:"Intentional fun / leisure session",mc:13},
+  {id:"hwk1",freq:"weekly",section:"Declutter",emoji:"🗂️",label:"One declutter session (any area)",mc:13},
+  {id:"hwk2",freq:"weekly",section:"Career",emoji:"💼",label:"Career / goals review (30 min)",mc:13},
+  {id:"hwk3",freq:"weekly",section:"Fun",emoji:"🎨",label:"Cultural outing or experience booked",mc:13},
+  {id:"hm01",freq:"monthly",section:"Finance",emoji:"📊",label:"Full budget review",mc:12},
+  {id:"hm02",freq:"monthly",section:"Finance",emoji:"📈",label:"Investment contribution confirmed",mc:12},
+  {id:"hm03",freq:"monthly",section:"Finance",emoji:"💎",label:"Net worth snapshot updated",mc:12},
+  {id:"hm04",freq:"monthly",section:"Learning",emoji:"📚",label:"One book finished",mc:12},
+  {id:"hm05",freq:"monthly",section:"Fun",emoji:"🏛️",label:"New experience (gallery/museum/event)",mc:12},
+  {id:"hq01",freq:"quarterly",section:"Finance",emoji:"📉",label:"Investment portfolio review",mc:4},
+  {id:"hq02",freq:"quarterly",section:"Career",emoji:"🎯",label:"Career goals audit",mc:4},
+  {id:"hq03",freq:"quarterly",section:"Declutter",emoji:"📦",label:"Big declutter round",mc:4},
+  {id:"hq04",freq:"quarterly",section:"Fun",emoji:"🎲",label:"Fun backlog review — pick next priorities",mc:4},
+  {id:"ha01",freq:"annual",section:"Finance",emoji:"🏦",label:"Full financial audit",mc:3},
+  {id:"ha02",freq:"annual",section:"Career",emoji:"🌟",label:"Annual goals reset & vision session",mc:3},
+];
+
+
+// ─── DATE HELPERS ─────────────────────────────────────────────
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function weekNum(s) {
+  const d = new Date(s); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() + 3 - (d.getDay()+6)%7);
+  const w1 = new Date(d.getFullYear(),0,4);
+  return 1 + Math.round(((d-w1)/86400000 - 3 + (w1.getDay()+6)%7)/7);
+}
+function quarterOf(m) { return Math.floor(m/3); }
+function daysInMonth(y,m) { return new Date(y,m+1,0).getDate(); }
+function fmtDate(s) {
+  if(!s) return "";
+  return new Date(s).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"});
+}
+
+// ─── CHECK KEYS ──────────────────────────────────────────────
+const dkey = (h,ds)    => `${h.id}__${ds}`;
+const wkey = (h,y,w)   => `${h.id}__w${y}-${w}`;
+const xkey = (h,y,w,n) => `${h.id}__w${y}-${w}__${n}`;
+const mkey = (h,y,m)   => `${h.id}__m${y}-${m}`;
+const qkey = (h,y,q)   => `${h.id}__q${y}-${q}`;
+const akey = (h,y)     => `${h.id}__a${y}`;
+
+function xCount(chk,h,y,w) {
+  let c=0;
+  for(let n=0;n<(h.timesPerWeek||1);n++) if(chk[xkey(h,y,w,n)]) c++;
+  return c;
+}
+function xDone(chk,h,y,w) { return xCount(chk,h,y,w) >= (h.timesPerWeek||1); }
+
+function streak(chk,h) {
+  let s=0; let d=new Date();
+  for(let i=0;i<400;i++) {
+    if(chk[dkey(h,d.toISOString().slice(0,10))]) { s++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  return s;
+}
+
+function masteryProg(chk,h) {
+  const keys = Object.keys(chk).filter(k => k.startsWith(h.id+"__") && chk[k]);
+  if(h.freq==="daily")      return { cur: streak(chk,h), tgt: h.mc };
+  if(h.freq==="everyNdays") return { cur: keys.length,    tgt: h.mc };
+  if(h.freq==="xperweek") {
+    const ws = new Set();
+    keys.forEach(k => { const m = k.match(/__w(\d+)-(\d+)__/); if(m) ws.add(`${m[1]}-${m[2]}`); });
+    let full=0;
+    ws.forEach(w => { const [y,wn]=w.split("-").map(Number); if(xDone(chk,h,y,wn)) full++; });
+    return { cur: full, tgt: h.mc };
+  }
+  return { cur: keys.length, tgt: h.mc };
+}
+
+function freqLabel(h) {
+  if(h.freq==="daily")      return "Daily";
+  if(h.freq==="everyNdays") return `Every ${h.everyN}d`;
+  if(h.freq==="xperweek")   return `${h.timesPerWeek}×/wk`;
+  if(h.freq==="weekly")     return "Weekly";
+  if(h.freq==="monthly")    return "Monthly";
+  if(h.freq==="quarterly")  return "Quarterly";
+  if(h.freq==="annual")     return "Annual";
+  return h.freq;
+}
+function masteryLabel(h) {
+  if(h.freq==="daily")      return "30 day streak";
+  if(h.freq==="everyNdays") return "45 completions";
+  if(h.freq==="xperweek")   return "13 full weeks";
+  if(h.freq==="weekly")     return "13 weeks";
+  if(h.freq==="monthly")    return "12 months";
+  if(h.freq==="quarterly")  return "4 quarters";
+  if(h.freq==="annual")     return "3 years";
+  return "";
+}
+function freqColor(h,C) {
+  if(h.freq==="daily")      return { color:C.accent,  pale:C.accentPale };
+  if(h.freq==="everyNdays") return { color:C.teal,    pale:C.tealPale };
+  if(h.freq==="xperweek")   return { color:C.green,   pale:C.greenPale };
+  if(h.freq==="weekly")     return { color:C.green,   pale:C.greenPale };
+  if(h.freq==="monthly")    return { color:C.purple,  pale:C.purplePale };
+  if(h.freq==="quarterly")  return { color:C.rose,    pale:C.rosePale };
+  if(h.freq==="annual")     return { color:C.muted,   pale:C.soft };
+  return { color:C.muted, pale:C.soft };
+}
+
+
+// ─── STORAGE (localStorage) ──────────────────────────────────
+const SK = {
+  rd:"ql_rd_v6", rc:"ql_rc_v6", re:"ql_re_v6",
+  hd:"ql_hd_v6", hc:"ql_hc_v6", he:"ql_he_v6",
+  backlog:"ql_bl_v6", gear:"ql_gear_v6",
+};
+function cGet(k) {
+  try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; }
+  catch { return null; }
+}
+function cSet(k,v) {
+  try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+}
+function emptyData() { return { checks:{}, mastered:{}, startDate:todayStr() }; }
+
+
+// ─── PRIMITIVE UI ─────────────────────────────────────────────
+function Pill({color,pale,children}) {
+  return (
+    <span style={{fontFamily:"'Jost'",fontSize:9,color,background:pale,padding:"1px 7px",borderRadius:10,whiteSpace:"nowrap"}}>
+      {children}
+    </span>
+  );
+}
+
+function Chkbox({on,partial,color,border,onClick}) {
+  return (
+    <div
+      onClick={e => { e.stopPropagation(); onClick(); }}
+      style={{
+        width:22, height:22, borderRadius:5, flexShrink:0, cursor:"pointer",
+        border:`2px solid ${on ? color : partial ? color+"99" : border}`,
+        background: on ? color : partial ? color+"22" : "transparent",
+        display:"flex", alignItems:"center", justifyContent:"center",
+        color:"#fff", fontSize:12, transition:"all 0.15s",
+      }}>
+      {on ? "✓" : partial ? "…" : ""}
+    </div>
+  );
+}
+
+// ─── HABIT ROW ────────────────────────────────────────────────
+function HabitRow({h,checked,mastered,onToggle,onEdit,extra,last,C}) {
+  const {color,pale} = freqColor(h,C);
+  const pt = useRef(null);
+  const [press,setPress] = useState(false);
+  const sp = () => { pt.current = setTimeout(() => { setPress(false); onEdit && onEdit(); }, 600); setPress(true); };
+  const ep = () => { clearTimeout(pt.current); setPress(false); };
+  return (
+    <div
+      className="row"
+      style={{
+        display:"flex", alignItems:"center", gap:10, padding:"11px 13px",
+        borderBottom: last ? "none" : `1px solid ${C.border}`,
+        opacity: mastered ? .75 : 1,
+        background: press ? pale+"60" : "transparent",
+      }}
+      onClick={onToggle}
+      onMouseDown={sp} onMouseUp={ep} onMouseLeave={ep}
+      onTouchStart={sp} onTouchEnd={ep}>
+      <span style={{fontSize:18,flexShrink:0}}>{h.emoji}</span>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:14,color:C.dark,textDecoration:checked?"line-through":"none",opacity:checked?.5:1,lineHeight:1.3}}>
+          {h.label}
+        </div>
+        <div style={{display:"flex",gap:5,marginTop:3,flexWrap:"wrap",alignItems:"center"}}>
+          <Pill color={color} pale={pale}>{freqLabel(h)}</Pill>
+          {extra && <span style={{fontFamily:"'Jost'",fontSize:9,color:C.muted}}>{extra}</span>}
+          {mastered && <span style={{fontFamily:"'Jost'",fontSize:9,color:C.mastered}}>✦ Mastered</span>}
+        </div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:5}}>
+        {onEdit && (
+          <button
+            className="btn"
+            onClick={e => { e.stopPropagation(); onEdit(); }}
+            style={{width:22,height:22,borderRadius:5,border:`1px solid ${C.border}`,background:C.soft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.muted,flexShrink:0}}>
+            ✏️
+          </button>
+        )}
+        <Chkbox on={checked} color={color} border={C.border} onClick={onToggle} />
+      </div>
+    </div>
+  );
+}
+
+// ─── XPW ROW ─────────────────────────────────────────────────
+function XpwRow({h,count,done,mastered,onLog,onEdit,last,C}) {
+  const {color,pale} = freqColor(h,C);
+  return (
+    <div
+      className="row"
+      style={{display:"flex",alignItems:"center",gap:10,padding:"11px 13px",borderBottom:last?"none":`1px solid ${C.border}`,opacity:mastered?.75:1}}
+      onClick={onLog}>
+      <span style={{fontSize:18,flexShrink:0}}>{h.emoji}</span>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:14,color:C.dark,lineHeight:1.3}}>{h.label}</div>
+        <div style={{display:"flex",gap:6,marginTop:4,alignItems:"center",flexWrap:"wrap"}}>
+          <Pill color={color} pale={pale}>{freqLabel(h)}</Pill>
+          <div style={{display:"flex",gap:3}}>
+            {Array.from({length:h.timesPerWeek}).map((_,i) => (
+              <div key={i} style={{width:11,height:11,borderRadius:3,background:i<count?color:C.border,transition:"background 0.2s"}} />
+            ))}
+          </div>
+          <span style={{fontFamily:"'Jost'",fontSize:9,color:C.muted}}>{count}/{h.timesPerWeek}</span>
+          {mastered && <span style={{fontFamily:"'Jost'",fontSize:9,color:C.mastered}}>✦ Mastered</span>}
+        </div>
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:5}}>
+        {onEdit && (
+          <button
+            className="btn"
+            onClick={e => { e.stopPropagation(); onEdit(); }}
+            style={{width:22,height:22,borderRadius:5,border:`1px solid ${C.border}`,background:C.soft,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:C.muted,flexShrink:0}}>
+            ✏️
+          </button>
+        )}
+        <Chkbox on={done} partial={!done&&count>0} color={color} border={C.border} onClick={onLog} />
+      </div>
+    </div>
+  );
+}
+
+// ─── SECTION GROUP ────────────────────────────────────────────
+function SectionGroup({label,habits,renderRow,C}) {
+  if(!habits.length) return null;
+  return (
+    <div style={{marginBottom:12}}>
+      <div style={{fontFamily:"'Jost'",fontSize:9,letterSpacing:"0.18em",color:C.mutedLight,textTransform:"uppercase",marginBottom:6}}>
+        {label}
+      </div>
+      <div style={{background:"#fff",borderRadius:11,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+        {habits.map((h,i) => renderRow(h, i===habits.length-1))}
+      </div>
+    </div>
+  );
+}
+
+// ─── RETRO MODAL ──────────────────────────────────────────────
+function RetroModal({habit,C,checks,onToggleDay,onClose}) {
+  const now = new Date();
+  const td = todayStr();
+  const dates = Array.from({length:30}, (_,i) => {
+    const d = new Date(now); d.setDate(d.getDate()-i); return d.toISOString().slice(0,10);
+  });
+  const canRetro = habit.freq==="daily" || habit.freq==="everyNdays";
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(10,12,16,0.75)",zIndex:700,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:C.bg,borderRadius:16,padding:22,width:"100%",maxWidth:400,boxShadow:"0 20px 50px rgba(0,0,0,0.3)",maxHeight:"85vh",display:"flex",flexDirection:"column"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+          <div>
+            <h2 style={{fontSize:18,fontWeight:400,color:C.dark}}>Log past dates</h2>
+            <p style={{fontFamily:"'Jost'",fontSize:11,color:C.muted,marginTop:2}}>{habit.emoji} {habit.label}</p>
+          </div>
+          <button className="btn" onClick={onClose} style={{fontSize:22,color:C.muted,marginTop:-4}}>×</button>
+        </div>
+        {canRetro ? (
+          <div style={{overflowY:"auto",flex:1,display:"flex",flexDirection:"column",gap:4}}>
+            {dates.map(ds => {
+              const chk = !!checks[dkey(habit,ds)];
+              const isToday = ds===td;
+              const label = isToday ? "Today" : new Date(ds).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short"});
+              return (
+                <div
+                  key={ds}
+                  onClick={() => onToggleDay(habit,ds)}
+                  style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",borderRadius:8,cursor:"pointer",transition:"all 0.12s",background:chk?C.accentPale:"#fff",border:`1px solid ${chk?C.accent:C.border}`}}>
+                  <span style={{fontFamily:"'Jost'",fontSize:12,color:isToday?C.accent:C.dark,fontWeight:isToday?600:400}}>{label}</span>
+                  <Chkbox on={chk} color={C.accent} border={C.border} onClick={() => onToggleDay(habit,ds)} />
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p style={{fontFamily:"'Jost'",fontSize:12,color:C.muted,textAlign:"center",padding:"20px 0",lineHeight:1.6}}>
+            For weekly/monthly habits use the<br/>Week or Month view to log past periods.
+          </p>
+        )}
+        <button className="btn" onClick={onClose} style={{marginTop:14,padding:"10px",border:`1px solid ${C.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:13,color:C.muted}}>
+          Done
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── EDIT MODAL ──────────────────────────────────────────────
+function EditModal({habit,isBuiltIn,onSave,onDelete,onRetro,onClose,C}) {
+  const [form,setForm] = useState({
+    emoji: habit.emoji,
+    label: habit.label,
+    section: habit.section,
+    freq: habit.freq,
+    timesPerWeek: habit.timesPerWeek || 3,
+    everyN: habit.everyN || 2,
+    mc: habit.mc,
+  });
+  const [conf,setConf] = useState(false);
+  const freqOpts = ["daily","everyNdays","xperweek","weekly","monthly","quarterly","annual"];
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(10,12,16,0.75)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:C.bg,borderRadius:16,padding:22,width:"100%",maxWidth:420,boxShadow:"0 20px 50px rgba(0,0,0,0.3)",maxHeight:"92vh",overflowY:"auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <h2 style={{fontSize:19,fontWeight:400,color:C.dark}}>Edit Ritual</h2>
+          <button className="btn" onClick={onClose} style={{fontSize:22,color:C.muted}}>×</button>
+        </div>
+        {isBuiltIn && (
+          <div style={{fontFamily:"'Jost'",fontSize:10,color:C.teal,background:C.tealPale,borderRadius:6,padding:"5px 9px",marginBottom:10}}>
+            Recommended habit — edits are personal overrides.
+          </div>
+        )}
+        <div style={{display:"flex",flexDirection:"column",gap:9}}>
+          <div style={{display:"flex",gap:8}}>
+            <input value={form.emoji} onChange={e => setForm(p => ({...p,emoji:e.target.value}))} style={{width:50,padding:"9px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:18,textAlign:"center",background:"#fff"}} />
+            <input value={form.label} onChange={e => setForm(p => ({...p,label:e.target.value}))} placeholder="Name" style={{flex:1,padding:"9px 11px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,background:"#fff",color:C.dark}} />
+          </div>
+          <input value={form.section} onChange={e => setForm(p => ({...p,section:e.target.value}))} placeholder="Category" style={{padding:"9px 11px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,background:"#fff",color:C.dark}} />
+          <select value={form.freq} onChange={e => setForm(p => ({...p,freq:e.target.value}))} disabled={isBuiltIn} style={{padding:"9px 11px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,background:isBuiltIn?C.soft:"#fff",color:C.dark,opacity:isBuiltIn?.6:1}}>
+            {freqOpts.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+          {form.freq==="xperweek" && (
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontFamily:"'Jost'",fontSize:12,color:C.muted}}>Times/week:</span>
+              <input type="number" min={1} max={7} value={form.timesPerWeek} onChange={e => setForm(p => ({...p,timesPerWeek:+e.target.value}))} style={{width:60,padding:"7px",border:`1px solid ${C.border}`,borderRadius:7,textAlign:"center",background:"#fff"}} />
+            </div>
+          )}
+          {form.freq==="everyNdays" && (
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontFamily:"'Jost'",fontSize:12,color:C.muted}}>Every N days:</span>
+              <input type="number" min={2} max={30} value={form.everyN} onChange={e => setForm(p => ({...p,everyN:+e.target.value}))} style={{width:60,padding:"7px",border:`1px solid ${C.border}`,borderRadius:7,textAlign:"center",background:"#fff"}} />
+            </div>
+          )}
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{fontFamily:"'Jost'",fontSize:12,color:C.muted,flex:1}}>Mastery target:</span>
+            <input type="number" min={1} value={form.mc} onChange={e => setForm(p => ({...p,mc:+e.target.value}))} style={{width:66,padding:"7px",border:`1px solid ${C.border}`,borderRadius:7,textAlign:"center",background:"#fff"}} />
+          </div>
+        </div>
+        <button className="btn" onClick={onRetro} style={{width:"100%",marginTop:12,padding:"9px",border:`1px solid ${C.accent}50`,borderRadius:8,fontFamily:"'Jost'",fontSize:11,color:C.accent,background:C.accentPale}}>
+          📅 Log retrospectively (past dates)
+        </button>
+        <div style={{display:"flex",gap:8,marginTop:10}}>
+          <button className="btn" onClick={onClose} style={{flex:1,padding:"10px",border:`1px solid ${C.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:12,color:C.muted}}>Cancel</button>
+          <button className="btn" onClick={() => { if(form.label.trim()) onSave({...habit,...form}); }} style={{flex:2,padding:"10px",background:C.accent,borderRadius:8,color:"#fff",fontFamily:"'Jost'",fontSize:12,fontWeight:500}}>Save ✦</button>
+        </div>
+        <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${C.border}`}}>
+          {!conf ? (
+            <button className="btn" onClick={() => setConf(true)} style={{width:"100%",padding:"8px",borderRadius:7,fontFamily:"'Jost'",fontSize:11,color:C.danger,border:`1px solid ${C.danger}30`,background:C.rosePale}}>
+              {isBuiltIn ? "Reset to original" : "Delete ritual"}
+            </button>
+          ) : (
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{fontFamily:"'Jost'",fontSize:12,color:C.danger,flex:1}}>Are you sure?</span>
+              <button className="btn" onClick={() => setConf(false)} style={{padding:"6px 12px",border:`1px solid ${C.border}`,borderRadius:7,fontFamily:"'Jost'",fontSize:11,color:C.muted}}>No</button>
+              <button className="btn" onClick={onDelete} style={{padding:"6px 12px",background:C.danger,borderRadius:7,fontFamily:"'Jost'",fontSize:11,color:"#fff"}}>Yes</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DATA BACKUP MODAL ───────────────────────────────────────
+function DataModal({state,onImport,onClose}) {
+  const [tab,setTab] = useState("export");
+  const [text,setText] = useState("");
+  const [err,setErr] = useState("");
+  const [ok,setOk] = useState(false);
+  const [copied,setCopied] = useState(false);
+  const fileRef = useRef(null);
+  const VER = "ql_v6";
+
+  function build() { return JSON.stringify({_version:VER,_at:new Date().toISOString(),...state},null,2); }
+  function download() {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([build()],{type:"application/json"}));
+    a.download = `backup-${todayStr()}.json`;
+    a.click();
+  }
+  async function copy() {
+    try { await navigator.clipboard.writeText(build()); setCopied(true); setTimeout(() => setCopied(false),2000); } catch {}
+  }
+  function validate(t) {
+    setErr(""); setOk(false);
+    try {
+      const p = JSON.parse(t);
+      if(p._version!==VER) { setErr("Version mismatch."); return; }
+      if(!p.rd) { setErr("Invalid file."); return; }
+      setOk(true);
+    } catch { setErr("Invalid JSON."); }
+  }
+  function doImport() {
+    try { const p = JSON.parse(text); onImport(p); onClose(); }
+    catch { setErr("Import failed."); }
+  }
+  const tabStyle = active => ({flex:1,padding:"9px 0",fontFamily:"'Jost'",fontSize:12,border:"none",cursor:"pointer",background:active?"#fff":SLATE.soft,color:active?SLATE.dark:SLATE.muted,borderBottom:active?`2px solid ${SLATE.accent}`:"2px solid transparent"});
+  return (
+    <div style={{position:"fixed",inset:0,background:"rgba(10,12,16,0.78)",zIndex:800,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:"#fff",borderRadius:16,width:"100%",maxWidth:450,boxShadow:"0 20px 60px rgba(0,0,0,0.35)",maxHeight:"90vh",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{padding:"18px 20px 0"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div>
+              <h2 style={{fontSize:19,fontWeight:400}}>Backup &amp; Restore</h2>
+              <p style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted,marginTop:2}}>All data — Rituals + Life HQ</p>
+            </div>
+            <button className="btn" onClick={onClose} style={{fontSize:22,color:SLATE.muted}}>×</button>
+          </div>
+          <div style={{display:"flex",marginLeft:-20,marginRight:-20,paddingLeft:20,paddingRight:20,borderBottom:`1px solid ${SLATE.border}`}}>
+            <button style={tabStyle(tab==="export")} onClick={() => setTab("export")}>⬇ Export</button>
+            <button style={tabStyle(tab==="import")} onClick={() => setTab("import")}>⬆ Import</button>
+          </div>
+        </div>
+        <div style={{padding:20,overflowY:"auto",flex:1}}>
+          {tab==="export" && (
+            <div style={{display:"flex",flexDirection:"column",gap:11}}>
+              <div style={{background:SLATE.soft,borderRadius:9,padding:"11px 14px",display:"flex",gap:10,flexWrap:"wrap"}}>
+                {[
+                  {l:"Ritual check-ins", v:Object.values(state.rd?.checks||{}).filter(Boolean).length},
+                  {l:"HQ check-ins",     v:Object.values(state.hd?.checks||{}).filter(Boolean).length},
+                  {l:"Backlog items",    v:(state.backlog||[]).length},
+                  {l:"Gear tracked",     v:(state.gear||[]).length},
+                ].map(s => (
+                  <div key={s.l} style={{textAlign:"center",flex:1,minWidth:70}}>
+                    <div style={{fontSize:19,fontWeight:300,color:SLATE.accent}}>{s.v}</div>
+                    <div style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.muted,marginTop:2}}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+              <button className="btn" onClick={download} style={{padding:"11px",background:SLATE.accent,borderRadius:9,color:"#fff",fontFamily:"'Jost'",fontSize:13,fontWeight:500}}>⬇ Download backup file</button>
+              <button className="btn" onClick={copy} style={{padding:"10px",border:`1px solid ${SLATE.border}`,borderRadius:9,color:copied?SLATE.mastered:SLATE.muted,fontFamily:"'Jost'",fontSize:12,background:copied?SLATE.greenPale:"transparent"}}>
+                {copied ? "✓ Copied!" : "Copy JSON to clipboard"}
+              </button>
+              <div style={{background:"#fffbeb",borderRadius:7,padding:"8px 12px",fontFamily:"'Jost'",fontSize:10,color:"#92741a",lineHeight:1.5}}>
+                💡 Export monthly and save to Google Drive or iCloud.
+              </div>
+            </div>
+          )}
+          {tab==="import" && (
+            <div style={{display:"flex",flexDirection:"column",gap:11}}>
+              <div style={{background:"#fff5f5",borderRadius:7,padding:"8px 12px",fontFamily:"'Jost'",fontSize:10,color:SLATE.danger}}>
+                ⚠ Replaces <strong>all</strong> current data. Export a backup first.
+              </div>
+              <input
+                ref={fileRef} type="file" accept=".json" style={{display:"none"}}
+                onChange={e => {
+                  const f = e.target.files[0]; if(!f) return;
+                  const r = new FileReader();
+                  r.onload = ev => { setText(ev.target.result); validate(ev.target.result); };
+                  r.readAsText(f);
+                }}
+              />
+              <button className="btn" onClick={() => fileRef.current?.click()} style={{padding:"10px",border:`2px dashed ${SLATE.border}`,borderRadius:9,fontFamily:"'Jost'",fontSize:12,color:SLATE.muted,background:SLATE.soft}}>
+                📂 Choose backup file
+              </button>
+              <textarea
+                value={text}
+                onChange={e => { setText(e.target.value); if(e.target.value.trim()) validate(e.target.value.trim()); else { setErr(""); setOk(false); } }}
+                placeholder="Or paste JSON here…"
+                style={{width:"100%",height:80,padding:"8px 11px",border:`1px solid ${err?SLATE.danger:ok?SLATE.mastered:SLATE.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:10,color:SLATE.dark,resize:"vertical"}}
+              />
+              {err && <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.danger,background:"#fff5f5",padding:"6px 10px",borderRadius:6}}>✕ {err}</div>}
+              {ok  && <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.mastered,background:SLATE.greenPale,padding:"6px 10px",borderRadius:6}}>✓ Valid — ready to import</div>}
+              <div style={{display:"flex",gap:8}}>
+                <button className="btn" onClick={onClose} style={{flex:1,padding:"10px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:12,color:SLATE.muted}}>Cancel</button>
+                <button className="btn" onClick={doImport} disabled={!ok} style={{flex:2,padding:"10px",background:ok?SLATE.danger:"#ccc",borderRadius:8,color:"#fff",fontFamily:"'Jost'",fontSize:12,fontWeight:500,cursor:ok?"pointer":"not-allowed"}}>
+                  Replace all data
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TODAY VIEW ───────────────────────────────────────────────
+function TodayView({habits,data,C,todayS,todayY,todayW,acts,filterFreq,setFilterFreq}) {
+  const now = new Date();
+  const q = quarterOf(now.getMonth());
+  function isChk(h) {
+    if(h.freq==="daily"||h.freq==="everyNdays") return !!data.checks[dkey(h,todayS)];
+    if(h.freq==="xperweek")   return xDone(data.checks,h,todayY,todayW);
+    if(h.freq==="weekly")     return !!data.checks[wkey(h,todayY,todayW)];
+    if(h.freq==="monthly")    return !!data.checks[mkey(h,todayY,now.getMonth())];
+    if(h.freq==="quarterly")  return !!data.checks[qkey(h,todayY,q)];
+    return !!data.checks[akey(h,todayY)];
+  }
+  function onTog(h) {
+    if(h.freq==="daily"||h.freq==="everyNdays") acts.toggleD(h,todayS);
+    else if(h.freq==="xperweek")  acts.logX(h,todayY,todayW);
+    else if(h.freq==="weekly")    acts.toggleW(h,todayY,todayW);
+    else if(h.freq==="monthly")   acts.toggleM(h,todayY,now.getMonth());
+    else if(h.freq==="quarterly") acts.toggleQ(h,todayY,q);
+    else acts.toggleA(h,todayY);
+  }
+  const fOpts = [{v:"all",l:"All"},{v:"daily",l:"Daily"},{v:"xperweek",l:"Training"},{v:"weekly",l:"Weekly"},{v:"monthly",l:"Monthly"},{v:"quarterly",l:"Quarterly"}];
+  const sections = {};
+  habits.filter(h => filterFreq==="all" || h.freq===filterFreq).forEach(h => {
+    if(!sections[h.section]) sections[h.section]=[];
+    sections[h.section].push(h);
+  });
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div>
+          <div style={{fontSize:19,fontWeight:400,color:C.dark}}>{now.toLocaleDateString("en-GB",{weekday:"long"})}</div>
+          <div style={{fontFamily:"'Jost'",fontSize:11,color:C.muted}}>{now.toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"})}</div>
+        </div>
+      </div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:12}}>
+        {fOpts.map(f => (
+          <button key={f.v} className="btn" onClick={() => setFilterFreq(f.v)}
+            style={{padding:"3px 9px",borderRadius:20,fontFamily:"'Jost'",fontSize:9,border:`1px solid ${filterFreq===f.v?C.accent:C.border}`,background:filterFreq===f.v?C.accentPale:"transparent",color:filterFreq===f.v?C.accent:C.muted}}>
+            {f.l}
+          </button>
+        ))}
+      </div>
+      {Object.entries(sections).map(([sec,sH]) => (
+        <div key={sec} style={{marginBottom:12}}>
+          <div style={{fontFamily:"'Jost'",fontSize:9,letterSpacing:"0.18em",color:C.mutedLight,textTransform:"uppercase",marginBottom:6,paddingLeft:2}}>{sec}</div>
+          <div style={{background:"#fff",borderRadius:11,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+            {sH.map((h,i) => h.freq==="xperweek"
+              ? <XpwRow key={h.id} h={h} count={xCount(data.checks,h,todayY,todayW)} done={xDone(data.checks,h,todayY,todayW)} mastered={!!data.mastered[h.id]} onLog={() => acts.logX(h,todayY,todayW)} onEdit={() => acts.openEdit(h)} last={i===sH.length-1} C={C} />
+              : <HabitRow key={h.id} h={h} checked={isChk(h)} mastered={!!data.mastered[h.id]} onToggle={() => onTog(h)} onEdit={() => acts.openEdit(h)} extra={h.freq==="daily"&&streak(data.checks,h)>1?`🔥 ${streak(data.checks,h)}d`:h.freq==="everyNdays"?`every ${h.everyN}d`:null} last={i===sH.length-1} C={C} />
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── WEEK VIEW ────────────────────────────────────────────────
+function WeekView({habits,data,C,acts}) {
+  const [off,setOff] = useState(0);
+  const now = new Date();
+  function getWD(o) {
+    const d = new Date(now); d.setDate(d.getDate()+o*7);
+    const diff = (d.getDay()+6)%7;
+    const m = new Date(d); m.setDate(d.getDate()-diff);
+    return Array.from({length:7}, (_,i) => { const dd=new Date(m); dd.setDate(m.getDate()+i); return dd; });
+  }
+  const days = getWD(off);
+  const wY = days[0].getFullYear();
+  const wN = weekNum(days[0].toISOString().slice(0,10));
+  const td = todayStr();
+  const DL = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  const dailyLike = habits.filter(h => h.freq==="daily"||h.freq==="everyNdays");
+  const xpwH = habits.filter(h => h.freq==="xperweek");
+  const weeklyH = habits.filter(h => h.freq==="weekly");
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <button className="btn" onClick={() => setOff(o=>o-1)} style={{fontSize:20,color:C.muted,padding:"2px 10px"}}>‹</button>
+        <div style={{textAlign:"center"}}>
+          <div style={{fontSize:17,fontWeight:400,color:C.dark}}>Week {wN}</div>
+          <div style={{fontFamily:"'Jost'",fontSize:10,color:C.muted}}>{days[0].toLocaleDateString("en-GB",{day:"numeric",month:"short"})} – {days[6].toLocaleDateString("en-GB",{day:"numeric",month:"short"})}</div>
+        </div>
+        <button className="btn" onClick={() => setOff(o=>o+1)} style={{fontSize:20,color:C.muted,padding:"2px 10px"}}>›</button>
+      </div>
+      {dailyLike.length>0 && (
+        <div style={{marginBottom:12}}>
+          <div style={{fontFamily:"'Jost'",fontSize:9,letterSpacing:"0.18em",color:C.mutedLight,textTransform:"uppercase",marginBottom:6}}>Daily</div>
+          <div style={{background:"#fff",borderRadius:11,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr repeat(7,28px)",gap:2,padding:"6px 10px 5px 13px",borderBottom:`1px solid ${C.border}`}}>
+              <div />
+              {days.map((d,i) => {
+                const isT = d.toISOString().slice(0,10)===td;
+                return (
+                  <div key={DL[i]+d.getDate()} style={{textAlign:"center"}}>
+                    <div style={{fontFamily:"'Jost'",fontSize:8,color:C.muted}}>{DL[i]}</div>
+                    <div style={{fontFamily:"'Jost'",fontSize:10,fontWeight:isT?600:400,color:isT?C.accent:C.dark,background:isT?C.accentPale:"transparent",borderRadius:"50%",width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",margin:"1px auto 0"}}>{d.getDate()}</div>
+                  </div>
+                );
+              })}
+            </div>
+            {dailyLike.map((h,hi) => (
+              <div key={h.id} style={{display:"grid",gridTemplateColumns:"1fr repeat(7,28px)",gap:2,padding:"8px 10px 8px 13px",borderBottom:hi<dailyLike.length-1?`1px solid ${C.border}`:"none",alignItems:"center"}}>
+                <div style={{fontSize:11,display:"flex",gap:4,alignItems:"center",minWidth:0,color:C.dark}}>
+                  <span style={{flexShrink:0}}>{h.emoji}</span>
+                  <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{h.label}</span>
+                  <button className="btn" onClick={() => acts.openEdit(h)} style={{fontSize:9,color:C.mutedLight,flexShrink:0}}>✏️</button>
+                </div>
+                {days.map((d,di) => {
+                  const ds = d.toISOString().slice(0,10);
+                  const chk = !!data.checks[dkey(h,ds)];
+                  return (
+                    <div key={di} onClick={() => acts.toggleD(h,ds)}
+                      style={{width:24,height:24,borderRadius:4,margin:"0 auto",cursor:"pointer",border:`1.5px solid ${chk?C.accent:C.border}`,background:chk?C.accentPale:"transparent",display:"flex",alignItems:"center",justifyContent:"center",color:C.accent,fontSize:11}}>
+                      {chk?"✓":""}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {xpwH.length>0 && (
+        <div style={{marginBottom:12}}>
+          <div style={{fontFamily:"'Jost'",fontSize:9,letterSpacing:"0.18em",color:C.mutedLight,textTransform:"uppercase",marginBottom:6}}>Training</div>
+          <div style={{background:"#fff",borderRadius:11,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+            {xpwH.map((h,i) => <XpwRow key={h.id} h={h} count={xCount(data.checks,h,wY,wN)} done={xDone(data.checks,h,wY,wN)} mastered={!!data.mastered[h.id]} onLog={() => acts.logX(h,wY,wN)} onEdit={() => acts.openEdit(h)} last={i===xpwH.length-1} C={C} />)}
+          </div>
+        </div>
+      )}
+      <div style={{fontFamily:"'Jost'",fontSize:9,letterSpacing:"0.18em",color:C.mutedLight,textTransform:"uppercase",marginBottom:6}}>Weekly</div>
+      <div style={{background:"#fff",borderRadius:11,border:`1px solid ${C.border}`,overflow:"hidden"}}>
+        {weeklyH.map((h,i) => {
+          const chk = !!data.checks[wkey(h,wY,wN)];
+          const {cur,tgt} = masteryProg(data.checks,h);
+          return <HabitRow key={h.id} h={h} checked={chk} mastered={!!data.mastered[h.id]} onToggle={() => acts.toggleW(h,wY,wN)} onEdit={() => acts.openEdit(h)} extra={data.mastered[h.id]?null:`${cur}/${tgt} wk`} last={i===weeklyH.length-1} C={C} />;
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── MONTH VIEW ───────────────────────────────────────────────
+function MonthView({habits,data,C,acts,sel,setSel}) {
+  const {y,m} = sel;
+  const days = daysInMonth(y,m);
+  const first = (new Date(y,m,1).getDay()+6)%7;
+  const td = todayStr();
+  const q = quarterOf(m);
+  const [selDay,setSelDay] = useState(null);
+  const prev = () => { setSel(s => s.m===0 ? {y:s.y-1,m:11} : {y:s.y,m:s.m-1}); setSelDay(null); };
+  const next = () => { setSel(s => s.m===11 ? {y:s.y+1,m:0} : {y:s.y,m:s.m+1}); setSelDay(null); };
+  const ds = d => `${y}-${String(m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  const dailyOnly = habits.filter(h => h.freq==="daily");
+  const dayDone = d => dailyOnly.filter(h => data.checks[dkey(h,ds(d))]).length;
+  const dayPct  = d => dailyOnly.length ? dayDone(d)/dailyOnly.length : 0;
+  const monthH   = habits.filter(h => h.freq==="monthly");
+  const quarterH = habits.filter(h => h.freq==="quarterly");
+  const annualH  = habits.filter(h => h.freq==="annual");
+  const DL = ["Mo","Tu","We","Th","Fr","Sa","Su"];
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+        <button className="btn" onClick={prev} style={{fontSize:20,color:C.muted,padding:"2px 10px"}}>‹</button>
+        <div style={{fontSize:17,fontWeight:400,color:C.dark}}>{new Date(y,m,1).toLocaleDateString("en-GB",{month:"long",year:"numeric"})}</div>
+        <button className="btn" onClick={next} style={{fontSize:20,color:C.muted,padding:"2px 10px"}}>›</button>
+      </div>
+      <div style={{background:"#fff",borderRadius:12,border:`1px solid ${C.border}`,padding:11,marginBottom:12}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+          {DL.map(l => <div key={l} style={{fontFamily:"'Jost'",fontSize:8,color:C.mutedLight,textAlign:"center"}}>{l}</div>)}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+          {Array.from({length:first}).map((_,i) => <div key={"e"+i} />)}
+          {Array.from({length:days},(_,i) => i+1).map(day => {
+            const dStr = ds(day);
+            const pct  = dayPct(day);
+            const done = dayDone(day);
+            const isT  = dStr===td;
+            const isFut= new Date(dStr) > new Date(td);
+            const isSel= selDay===day;
+            const alpha= Math.round(pct*190).toString(16).padStart(2,"0");
+            return (
+              <div
+                key={day}
+                onClick={() => !isFut && setSelDay(isSel?null:day)}
+                style={{aspectRatio:"1",borderRadius:6,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:isSel?C.accentPale:isFut?"transparent":pct>0?`${C.accent}${alpha}`:"transparent",border:`1.5px solid ${isT?C.accent:isSel?C.accent+"80":"transparent"}`,cursor:isFut?"default":"pointer",opacity:isFut?.3:1}}>
+                <div style={{fontFamily:"'Jost'",fontSize:10,fontWeight:isT?600:400,color:pct>0.6?"#fff":C.dark}}>{day}</div>
+                {done>0&&!isFut && <div style={{fontFamily:"'Jost'",fontSize:7,color:pct>0.6?"rgba(255,255,255,0.8)":C.muted}}>{done}</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {selDay && (
+        <div style={{background:"#fff",borderRadius:11,border:`1px solid ${C.accent}50`,padding:12,marginBottom:12}}>
+          <div style={{fontSize:14,fontWeight:400,color:C.dark,marginBottom:8}}>{new Date(y,m,selDay).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"})}</div>
+          {dailyOnly.map((h,i,arr) => {
+            const dStr = ds(selDay);
+            const chk  = !!data.checks[dkey(h,dStr)];
+            return <HabitRow key={h.id} h={h} checked={chk} mastered={!!data.mastered[h.id]} onToggle={() => acts.toggleD(h,dStr)} onEdit={() => acts.openEdit(h)} last={i===arr.length-1} C={C} />;
+          })}
+        </div>
+      )}
+      <SectionGroup label="Monthly" habits={monthH} C={C} renderRow={(h,last) => {
+        const chk = !!data.checks[mkey(h,y,m)];
+        const {cur,tgt} = masteryProg(data.checks,h);
+        return <HabitRow key={h.id} h={h} checked={chk} mastered={!!data.mastered[h.id]} onToggle={() => acts.toggleM(h,y,m)} onEdit={() => acts.openEdit(h)} extra={data.mastered[h.id]?null:`${cur}/${tgt} mo`} last={last} C={C} />;
+      }} />
+      <SectionGroup label={`Quarterly Q${q+1}`} habits={quarterH} C={C} renderRow={(h,last) => {
+        const chk = !!data.checks[qkey(h,y,q)];
+        const {cur,tgt} = masteryProg(data.checks,h);
+        return <HabitRow key={h.id} h={h} checked={chk} mastered={!!data.mastered[h.id]} onToggle={() => acts.toggleQ(h,y,q)} onEdit={() => acts.openEdit(h)} extra={data.mastered[h.id]?null:`${cur}/${tgt} q`} last={last} C={C} />;
+      }} />
+      <SectionGroup label={`Annual ${y}`} habits={annualH} C={C} renderRow={(h,last) => {
+        const chk = !!data.checks[akey(h,y)];
+        const {cur,tgt} = masteryProg(data.checks,h);
+        return <HabitRow key={h.id} h={h} checked={chk} mastered={!!data.mastered[h.id]} onToggle={() => acts.toggleA(h,y)} onEdit={() => acts.openEdit(h)} extra={data.mastered[h.id]?null:`${cur}/${tgt} y`} last={last} C={C} />;
+      }} />
+    </div>
+  );
+}
+
+// ─── TRACKER VIEW ────────────────────────────────────────────
+function TrackerView({habits,data,C,acts}) {
+  const mc   = Object.keys(data.mastered).length;
+  const days  = data.startDate ? Math.floor((Date.now()-new Date(data.startDate).getTime())/86400000)+1 : 1;
+  const maxS  = Math.max(0,...habits.filter(h=>h.freq==="daily").map(h=>streak(data.checks,h)));
+  const freqOrder = ["daily","everyNdays","xperweek","weekly","monthly","quarterly","annual"];
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+        {[
+          {l:"Mastered",    v:mc,          of:habits.length, i:"✦", col:C.mastered},
+          {l:"Best streak", v:`${maxS}d`,  i:"🔥", col:C.accent},
+          {l:"Days tracked",v:days,        i:"📅", col:C.purple},
+        ].map(s => (
+          <div key={s.l} style={{background:"#fff",borderRadius:11,border:`1px solid ${C.border}`,padding:"11px 8px",textAlign:"center"}}>
+            <div style={{fontSize:18}}>{s.i}</div>
+            <div style={{fontSize:20,fontWeight:300,color:s.col,marginTop:3}}>{s.v}{s.of?<span style={{fontSize:11,color:C.mutedLight}}>/{s.of}</span>:""}</div>
+            <div style={{fontFamily:"'Jost'",fontSize:9,color:C.muted,marginTop:2}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      {freqOrder.map(freq => {
+        const group = habits.filter(h => h.freq===freq);
+        if(!group.length) return null;
+        const {color,pale} = freqColor({freq},C);
+        return (
+          <div key={freq} style={{marginBottom:14}}>
+            <div style={{fontFamily:"'Jost'",fontSize:9,letterSpacing:"0.18em",color,textTransform:"uppercase",marginBottom:6}}>{freq}</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {group.map(h => {
+                const {cur,tgt} = masteryProg(data.checks,h);
+                const pct       = Math.min(cur/tgt,1);
+                const mastered  = !!data.mastered[h.id];
+                return (
+                  <div key={h.id} style={{background:"#fff",borderRadius:9,border:`1px solid ${mastered?color+"50":C.border}`,padding:"10px 12px"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:6}}>
+                      <span style={{fontSize:14}}>{h.emoji}</span>
+                      <div style={{flex:1,fontSize:12,color:C.dark}}>{h.label}</div>
+                      <button className="btn" onClick={() => acts.openEdit(h)} style={{fontSize:11,color:C.mutedLight}}>✏️</button>
+                      {mastered
+                        ? <span style={{fontFamily:"'Jost'",fontSize:9,color:C.mastered,background:C.greenPale,padding:"1px 6px",borderRadius:8}}>✦</span>
+                        : <span style={{fontFamily:"'Jost'",fontSize:9,color:C.muted}}>{cur}/{tgt}</span>
+                      }
+                    </div>
+                    <div style={{height:3,background:pale||C.soft,borderRadius:2,overflow:"hidden"}}>
+                      <div style={{height:"100%",width:`${mastered?100:pct*100}%`,background:mastered?C.mastered:color,borderRadius:2,transition:"width 0.5s"}} />
+                    </div>
+                    {!mastered && <div style={{fontFamily:"'Jost'",fontSize:8,color:C.mutedLight,marginTop:3}}>{masteryLabel(h)}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {mc>0 && (
+        <div style={{background:`linear-gradient(135deg,${C.dark},${C.dark2})`,borderRadius:12,padding:"16px 20px",textAlign:"center",marginTop:6}}>
+          <div style={{fontSize:20,marginBottom:5}}>✦</div>
+          <div style={{fontSize:16,fontWeight:300,color:"#f4f6f9"}}>{mc} ritual{mc>1?"s":""} mastered</div>
+          <div style={{fontFamily:"'Jost'",fontSize:10,color:"#7a9aba",marginTop:4}}>These are no longer habits — they are <em style={{color:C.accent}}>who you are</em>.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── HABIT WORLD ─────────────────────────────────────────────
+function HabitWorld({HABITS,data,customHabits,habitEdits,persist,persistCustom,persistEdits,C,worldId}) {
+  const [view,setView]            = useState("today");
+  const [filterFreq,setFilter]    = useState("all");
+  const [addModal,setAddModal]    = useState(false);
+  const [editTarget,setEditTgt]   = useState(null);
+  const [retroTarget,setRetroTgt] = useState(null);
+  const [newH,setNewH]            = useState({label:"",freq:"daily",section:"Custom",emoji:"⭐",timesPerWeek:3,everyN:2});
+  const [selMonth,setSelMonth]    = useState(() => { const n=new Date(); return {y:n.getFullYear(),m:n.getMonth()}; });
+
+  const builtInIds = new Set(HABITS.map(h => h.id));
+  const merged     = HABITS.map(h => habitEdits[h.id] ? {...h,...habitEdits[h.id]} : h);
+  const allHabits  = [...merged,...customHabits];
+
+  const now    = new Date();
+  const todayS = todayStr();
+  const todayW = weekNum(todayS);
+  const todayY = now.getFullYear();
+
+  const dailyDone  = allHabits.filter(h => h.freq==="daily" && data.checks[dkey(h,todayS)]).length;
+  const dailyTotal = allHabits.filter(h => h.freq==="daily").length;
+
+  const acts = {
+    toggleD: (h,ds) => { const k=dkey(h,ds); persist({...data,checks:{...data.checks,[k]:!data.checks[k]}}); },
+    logX:    (h,y,w) => {
+      const cs = {...data.checks};
+      const cur = xCount(cs,h,y,w);
+      if(cur < h.timesPerWeek) cs[xkey(h,y,w,cur)] = true;
+      else for(let n=0;n<h.timesPerWeek;n++) delete cs[xkey(h,y,w,n)];
+      persist({...data,checks:cs});
+    },
+    toggleW: (h,y,w) => { const k=wkey(h,y,w); persist({...data,checks:{...data.checks,[k]:!data.checks[k]}}); },
+    toggleM: (h,y,m) => { const k=mkey(h,y,m); persist({...data,checks:{...data.checks,[k]:!data.checks[k]}}); },
+    toggleQ: (h,y,q) => { const k=qkey(h,y,q); persist({...data,checks:{...data.checks,[k]:!data.checks[k]}}); },
+    toggleA: (h,y)   => { const k=akey(h,y);   persist({...data,checks:{...data.checks,[k]:!data.checks[k]}}); },
+    openEdit: h => setEditTgt({habit:h,isBuiltIn:builtInIds.has(h.id)}),
+  };
+
+  function saveEdit(updated) {
+    if(editTarget.isBuiltIn) {
+      const ov = {emoji:updated.emoji,label:updated.label,section:updated.section,mc:updated.mc};
+      if(updated.freq==="xperweek")   ov.timesPerWeek = updated.timesPerWeek;
+      if(updated.freq==="everyNdays") ov.everyN       = updated.everyN;
+      persistEdits({...habitEdits,[editTarget.habit.id]:ov});
+    } else {
+      persistCustom(customHabits.map(h => h.id===editTarget.habit.id ? {...h,...updated} : h));
+    }
+    setEditTgt(null);
+  }
+  function deleteEdit() {
+    if(editTarget.isBuiltIn) { const e={...habitEdits}; delete e[editTarget.habit.id]; persistEdits(e); }
+    else persistCustom(customHabits.filter(h => h.id!==editTarget.habit.id));
+    setEditTgt(null);
+  }
+  function addCustom() {
+    if(!newH.label.trim()) return;
+    const mc = newH.freq==="daily"?30:newH.freq==="everyNdays"?45:newH.freq==="xperweek"?13:newH.freq==="weekly"?13:newH.freq==="monthly"?12:newH.freq==="quarterly"?4:3;
+    persistCustom([...customHabits,{...newH,id:worldId+"_c"+Date.now(),mc}]);
+    setAddModal(false);
+    setNewH({label:"",freq:"daily",section:"Custom",emoji:"⭐",timesPerWeek:3,everyN:2});
+  }
+
+  const navItems = [{id:"today",l:"Today",i:"☀️"},{id:"week",l:"Week",i:"📅"},{id:"month",l:"Month",i:"🗓️"},{id:"tracker",l:"Progress",i:"📈"}];
+  const sharedProps = {habits:allHabits,data,C,acts,todayS,todayY,todayW};
+  return (
+    <div>
+      <div style={{display:"flex",background:C.dark,borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
+        {navItems.map(n => (
+          <button key={n.id} className="btn" onClick={() => setView(n.id)}
+            style={{flex:1,padding:"7px 4px 9px",background:view===n.id?"rgba(255,255,255,0.1)":"transparent",borderBottom:view===n.id?`2px solid ${C.accent}`:"2px solid transparent",color:view===n.id?C.accent:C.mutedLight,fontFamily:"'Jost'",fontSize:10}}>
+            <div style={{fontSize:14}}>{n.i}</div>
+            <div style={{marginTop:1}}>{n.l}</div>
+          </button>
+        ))}
+      </div>
+      <div style={{height:2,background:C.dark}}>
+        <div style={{height:"100%",background:`linear-gradient(90deg,${C.accent},${C.accentLight})`,width:`${dailyTotal?dailyDone/dailyTotal*100:0}%`,transition:"width 0.4s"}} />
+      </div>
+      <div style={{padding:"14px 16px 90px"}}>
+        {view==="today"   && <TodayView   {...sharedProps} filterFreq={filterFreq} setFilterFreq={setFilter} />}
+        {view==="week"    && <WeekView    {...sharedProps} />}
+        {view==="month"   && <MonthView   {...sharedProps} sel={selMonth} setSel={setSelMonth} />}
+        {view==="tracker" && <TrackerView {...sharedProps} />}
+      </div>
+      <button className="btn" onClick={() => setAddModal(true)}
+        style={{position:"fixed",bottom:24,right:18,width:48,height:48,borderRadius:"50%",background:`linear-gradient(135deg,${C.accent},${C.accentLight})`,color:"#fff",fontSize:20,boxShadow:`0 4px 16px ${C.accent}60`,display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>
+        +
+      </button>
+      {addModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(10,12,16,0.72)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:C.bg,borderRadius:16,padding:22,width:"100%",maxWidth:390,boxShadow:"0 20px 50px rgba(0,0,0,0.3)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <h2 style={{fontSize:18,fontWeight:400,color:C.dark}}>Add Ritual</h2>
+              <button className="btn" onClick={() => setAddModal(false)} style={{fontSize:21,color:C.muted}}>×</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              <div style={{display:"flex",gap:8}}>
+                <input value={newH.emoji} onChange={e => setNewH(p => ({...p,emoji:e.target.value}))} style={{width:48,padding:"8px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:18,textAlign:"center",background:"#fff"}} />
+                <input value={newH.label} onChange={e => setNewH(p => ({...p,label:e.target.value}))} placeholder="Name" style={{flex:1,padding:"8px 11px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,background:"#fff",color:C.dark}} />
+              </div>
+              <input value={newH.section} onChange={e => setNewH(p => ({...p,section:e.target.value}))} placeholder="Category" style={{padding:"8px 11px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:13,background:"#fff",color:C.dark}} />
+              <select value={newH.freq} onChange={e => setNewH(p => ({...p,freq:e.target.value}))} style={{padding:"8px 11px",border:`1px solid ${C.border}`,borderRadius:8,fontSize:12,background:"#fff",color:C.dark}}>
+                {["daily","everyNdays","xperweek","weekly","monthly","quarterly","annual"].map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+              {newH.freq==="xperweek" && (
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontFamily:"'Jost'",fontSize:12,color:C.muted}}>Times/week:</span>
+                  <input type="number" min={1} max={7} value={newH.timesPerWeek} onChange={e => setNewH(p => ({...p,timesPerWeek:+e.target.value}))} style={{width:58,padding:"7px",border:`1px solid ${C.border}`,borderRadius:7,textAlign:"center",background:"#fff"}} />
+                </div>
+              )}
+              {newH.freq==="everyNdays" && (
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontFamily:"'Jost'",fontSize:12,color:C.muted}}>Every N days:</span>
+                  <input type="number" min={2} max={30} value={newH.everyN} onChange={e => setNewH(p => ({...p,everyN:+e.target.value}))} style={{width:58,padding:"7px",border:`1px solid ${C.border}`,borderRadius:7,textAlign:"center",background:"#fff"}} />
+                </div>
+              )}
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button className="btn" onClick={() => setAddModal(false)} style={{flex:1,padding:"10px",border:`1px solid ${C.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:12,color:C.muted}}>Cancel</button>
+              <button className="btn" onClick={addCustom} style={{flex:2,padding:"10px",background:C.accent,borderRadius:8,color:"#fff",fontFamily:"'Jost'",fontSize:12,fontWeight:500}}>Add ✦</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {editTarget && (
+        <EditModal
+          habit={editTarget.habit} isBuiltIn={editTarget.isBuiltIn}
+          onSave={saveEdit} onDelete={deleteEdit}
+          onRetro={() => { setEditTgt(null); setRetroTgt(editTarget.habit); }}
+          onClose={() => setEditTgt(null)} C={C}
+        />
+      )}
+      {retroTarget && (
+        <RetroModal habit={retroTarget} C={C} checks={data.checks} onToggleDay={acts.toggleD} onClose={() => setRetroTgt(null)} />
+      )}
+    </div>
+  );
+}
+
+// ─── BACKLOG TRACKER ─────────────────────────────────────────
+function BacklogTracker({backlog,setBacklog}) {
+  const [modal,setModal]          = useState(false);
+  const [catFilter,setCatFilter]  = useState("All");
+  const [editing,setEditing]      = useState(null);
+  const [catModal,setCatModal]    = useState(false);
+  const [newCat,setNewCat]        = useState("");
+  const [extraCats,setExtraCats]  = useState(["Magazines"]);
+  const [form,setForm] = useState({title:"",category:"Magazines",totalCount:1,readCount:0,removedCount:0,notes:""});
+
+  const cats    = Array.from(new Set([...extraCats,...backlog.map(b => b.category)])).sort();
+  const allCats = ["All",...cats];
+
+  function openAdd() { setForm({title:"",category:form.category||cats[0]||"Magazines",totalCount:1,readCount:0,removedCount:0,notes:""}); setEditing(null); setModal(true); }
+  function openEdit(b) { setForm({...b}); setEditing(b.id); setModal(true); }
+  function save() {
+    if(!form.title.trim()) return;
+    const item = {...form,totalCount:+form.totalCount||1,readCount:+form.readCount||0,removedCount:+form.removedCount||0};
+    if(editing) setBacklog(backlog.map(b => b.id===editing ? {...b,...item} : b));
+    else setBacklog([...backlog,{...item,id:"bl"+Date.now(),addedAt:todayStr()}]);
+    setModal(false);
+  }
+  function del(id) { setBacklog(backlog.filter(b => b.id!==id)); }
+  function adjust(id,field,delta) {
+    setBacklog(backlog.map(b => {
+      if(b.id!==id) return b;
+      const val = Math.max(0, Math.min((b[field]||0)+delta, b.totalCount||1));
+      return {...b,[field]:val};
+    }));
+  }
+  function addCat() {
+    const t = newCat.trim(); if(!t) { setCatModal(false); setNewCat(""); return; }
+    if(!cats.includes(t)) setExtraCats(prev => [...prev,t]);
+    setForm(p => ({...p,category:t}));
+    setCatModal(false); setNewCat("");
+    if(!modal) setModal(true);
+  }
+  function deleteCategory(cat) {
+    setExtraCats(prev => prev.filter(c => c!==cat));
+    if(backlog.some(b => b.category===cat)) setBacklog(backlog.map(b => b.category===cat ? {...b,category:"Uncategorised"} : b));
+    if(catFilter===cat) setCatFilter("All");
+  }
+
+  const filtered     = catFilter==="All" ? backlog : backlog.filter(b => b.category===catFilter);
+  const totalItems   = backlog.reduce((a,b) => a+(b.totalCount||1), 0);
+  const totalRead    = backlog.reduce((a,b) => a+(b.readCount||0), 0);
+  const totalRemoved = backlog.reduce((a,b) => a+(b.removedCount||0), 0);
+  return (
+    <div style={{padding:"16px 16px 80px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14}}>
+        {[{l:"Total items",v:totalItems,c:SLATE.accent},{l:"Read / consumed",v:totalRead,c:SLATE.green},{l:"Cleared out",v:totalRemoved,c:SLATE.mastered}].map(s => (
+          <div key={s.l} style={{background:"#fff",borderRadius:10,border:`1px solid ${SLATE.border}`,padding:"10px 8px",textAlign:"center"}}>
+            <div style={{fontSize:18,fontWeight:300,color:s.c}}>{s.v}</div>
+            <div style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.muted,marginTop:2}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:12,alignItems:"center"}}>
+        {allCats.map(c => (
+          <div key={c} style={{display:"flex",alignItems:"center",border:`1px solid ${catFilter===c?SLATE.accent:SLATE.border}`,background:catFilter===c?SLATE.accentPale:"transparent",borderRadius:20,overflow:"hidden"}}>
+            <button className="btn" onClick={() => setCatFilter(c)} style={{padding:"3px 9px",fontFamily:"'Jost'",fontSize:9,color:catFilter===c?SLATE.accent:SLATE.muted}}>{c}</button>
+            {c!=="All" && (
+              <button className="btn" onClick={e => { e.stopPropagation(); deleteCategory(c); }} style={{padding:"2px 7px 2px 0",fontSize:11,color:catFilter===c?SLATE.accent:SLATE.mutedLight,display:"flex",alignItems:"center"}} title="Remove category">×</button>
+            )}
+          </div>
+        ))}
+        <button className="btn" onClick={() => setCatModal(true)} style={{padding:"3px 9px",borderRadius:20,fontFamily:"'Jost'",fontSize:9,border:`1px dashed ${SLATE.border}`,color:SLATE.muted}}>+ Category</button>
+      </div>
+      {filtered.length===0 && <div style={{textAlign:"center",padding:"40px 20px",color:SLATE.muted,fontFamily:"'Jost'",fontSize:13}}>Nothing here yet — tap + to add items ✦</div>}
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {filtered.map(item => {
+          const readPct    = (item.readCount||0) / (item.totalCount||1);
+          const removedPct = (item.removedCount||0) / (item.totalCount||1);
+          const fullyRemoved = removedPct>=1;
+          return (
+            <div key={item.id} style={{background:"#fff",borderRadius:11,border:`1px solid ${fullyRemoved?SLATE.greenPale:SLATE.border}`,padding:"13px 13px",opacity:fullyRemoved?.72:1}}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:15,fontWeight:400,color:SLATE.dark}}>{item.title}</div>
+                  <div style={{display:"flex",gap:5,marginTop:4,flexWrap:"wrap",alignItems:"center"}}>
+                    <Pill color={SLATE.accent} pale={SLATE.accentPale}>{item.category}</Pill>
+                    {fullyRemoved && <span style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.mastered}}>✓ Cleared out</span>}
+                    <span style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.mutedLight}}>{item.totalCount} item{item.totalCount!==1?"s":""}</span>
+                  </div>
+                  {item.notes && <div style={{fontFamily:"'Jost'",fontSize:11,color:SLATE.muted,marginTop:5,lineHeight:1.4}}>{item.notes}</div>}
+                </div>
+                <button className="btn" onClick={() => openEdit(item)} style={{fontSize:13,color:SLATE.muted,flexShrink:0,padding:"1px 2px"}}>✏️</button>
+              </div>
+              <div style={{marginBottom:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <span style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted}}>📖 Read / consumed</span>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <button className="btn" onClick={() => adjust(item.id,"readCount",-1)} style={{width:22,height:22,borderRadius:"50%",border:`1px solid ${SLATE.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:SLATE.muted,lineHeight:1}}>−</button>
+                    <span style={{fontFamily:"'Jost'",fontSize:12,color:SLATE.dark,minWidth:48,textAlign:"center"}}>{item.readCount||0}/{item.totalCount}</span>
+                    <button className="btn" onClick={() => adjust(item.id,"readCount",1)} style={{width:22,height:22,borderRadius:"50%",border:`1px solid ${SLATE.green}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:SLATE.green,lineHeight:1}}>+</button>
+                  </div>
+                </div>
+                <div style={{height:5,background:SLATE.greenPale,borderRadius:3}}>
+                  <div style={{height:"100%",width:`${readPct*100}%`,background:SLATE.green,borderRadius:3,transition:"width 0.3s"}} />
+                </div>
+              </div>
+              <div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                  <span style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted}}>🗑️ Removed from home</span>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <button className="btn" onClick={() => adjust(item.id,"removedCount",-1)} style={{width:22,height:22,borderRadius:"50%",border:`1px solid ${SLATE.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:SLATE.muted,lineHeight:1}}>−</button>
+                    <span style={{fontFamily:"'Jost'",fontSize:12,color:SLATE.dark,minWidth:48,textAlign:"center"}}>{item.removedCount||0}/{item.totalCount}</span>
+                    <button className="btn" onClick={() => adjust(item.id,"removedCount",1)} style={{width:22,height:22,borderRadius:"50%",border:`1px solid ${SLATE.mastered}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,color:SLATE.mastered,lineHeight:1}}>+</button>
+                  </div>
+                </div>
+                <div style={{height:5,background:SLATE.tealPale,borderRadius:3}}>
+                  <div style={{height:"100%",width:`${removedPct*100}%`,background:SLATE.mastered,borderRadius:3,transition:"width 0.3s"}} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <button className="btn" onClick={openAdd} style={{position:"fixed",bottom:24,right:18,width:48,height:48,borderRadius:"50%",background:`linear-gradient(135deg,${SLATE.accent},${SLATE.accentLight})`,color:"#fff",fontSize:20,boxShadow:`0 4px 16px ${SLATE.accent}60`,display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>+</button>
+      {modal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(10,12,16,0.75)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:SLATE.bg,borderRadius:16,padding:22,width:"100%",maxWidth:410,boxShadow:"0 20px 50px rgba(0,0,0,0.3)",maxHeight:"92vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <h2 style={{fontSize:18,fontWeight:400,color:SLATE.dark}}>{editing?"Edit item":"Add to backlog"}</h2>
+              <button className="btn" onClick={() => setModal(false)} style={{fontSize:21,color:SLATE.muted}}>×</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:9}}>
+              <input value={form.title} onChange={e => setForm(p => ({...p,title:e.target.value}))} placeholder="Title e.g. Vogue Jan 2026 *" style={{padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:13,background:"#fff",color:SLATE.dark}} />
+              <div style={{display:"flex",gap:8}}>
+                <select value={form.category} onChange={e => setForm(p => ({...p,category:e.target.value}))} style={{flex:1,padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:12,background:"#fff",color:SLATE.dark}}>
+                  {cats.map(c => <option key={c}>{c}</option>)}
+                  {cats.length===0 && <option>Magazines</option>}
+                </select>
+                <button className="btn" onClick={() => setCatModal(true)} style={{padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:11,color:SLATE.muted,background:"#fff",whiteSpace:"nowrap"}}>+ New</button>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:"'Jost'",fontSize:12,color:SLATE.muted,flex:1}}>Total count:</span>
+                <input type="number" min={1} value={form.totalCount} onChange={e => setForm(p => ({...p,totalCount:+e.target.value||1}))} style={{width:66,padding:"7px",border:`1px solid ${SLATE.border}`,borderRadius:7,textAlign:"center",background:"#fff"}} />
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:"'Jost'",fontSize:12,color:SLATE.muted,flex:1}}>Already read:</span>
+                <input type="number" min={0} max={form.totalCount} value={form.readCount} onChange={e => setForm(p => ({...p,readCount:+e.target.value||0}))} style={{width:66,padding:"7px",border:`1px solid ${SLATE.border}`,borderRadius:7,textAlign:"center",background:"#fff"}} />
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontFamily:"'Jost'",fontSize:12,color:SLATE.muted,flex:1}}>Already removed:</span>
+                <input type="number" min={0} max={form.totalCount} value={form.removedCount} onChange={e => setForm(p => ({...p,removedCount:+e.target.value||0}))} style={{width:66,padding:"7px",border:`1px solid ${SLATE.border}`,borderRadius:7,textAlign:"center",background:"#fff"}} />
+              </div>
+              <textarea value={form.notes} onChange={e => setForm(p => ({...p,notes:e.target.value}))} placeholder="Notes (optional)" rows={2} style={{padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:12,background:"#fff",color:SLATE.dark,resize:"vertical",fontFamily:"'Jost'"}} />
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              {editing && <button className="btn" onClick={() => { del(editing); setModal(false); }} style={{padding:"10px 12px",border:`1px solid ${SLATE.danger}30`,borderRadius:8,fontFamily:"'Jost'",fontSize:11,color:SLATE.danger,background:SLATE.rosePale}}>Delete</button>}
+              <button className="btn" onClick={() => setModal(false)} style={{flex:1,padding:"10px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:12,color:SLATE.muted}}>Cancel</button>
+              <button className="btn" onClick={save} style={{flex:2,padding:"10px",background:SLATE.accent,borderRadius:8,color:"#fff",fontFamily:"'Jost'",fontSize:12,fontWeight:500}}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {catModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(10,12,16,0.6)",zIndex:700,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:"#fff",borderRadius:14,padding:20,width:"100%",maxWidth:320,boxShadow:"0 10px 40px rgba(0,0,0,0.25)"}}>
+            <h3 style={{fontSize:16,fontWeight:400,color:SLATE.dark,marginBottom:12}}>New category</h3>
+            <input value={newCat} onChange={e => setNewCat(e.target.value)} onKeyDown={e => e.key==="Enter"&&addCat()} placeholder="e.g. Manga, Vinyl, Courses…" autoFocus style={{width:"100%",padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:13,background:"#fff",color:SLATE.dark}} />
+            <div style={{display:"flex",gap:8,marginTop:12}}>
+              <button className="btn" onClick={() => { setCatModal(false); setNewCat(""); }} style={{flex:1,padding:"9px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:12,color:SLATE.muted}}>Cancel</button>
+              <button className="btn" onClick={addCat} style={{flex:2,padding:"9px",background:SLATE.accent,borderRadius:8,color:"#fff",fontFamily:"'Jost'",fontSize:12,fontWeight:500}}>Add</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── COST PER USE TRACKER ────────────────────────────────────
+function CostPerUseTracker({gear,setGear}) {
+  const [modal,setModal]     = useState(false);
+  const [editing,setEditing] = useState(null);
+  const [form,setForm]       = useState({name:"",emoji:"🔌",price:"",targetCpu:"",startingUses:"0",purchaseDate:"",notes:"",currency:"£"});
+  const CURRENCIES = ["£","€","$","zł"];
+
+  function openAdd() {
+    setForm({name:"",emoji:"🔌",price:"",targetCpu:"",startingUses:"0",purchaseDate:"",notes:"",currency:"£"});
+    setEditing(null); setModal(true);
+  }
+  function openEdit(item) {
+    setForm({...item, price:String(item.price), targetCpu:String(item.targetCpu), startingUses:String(item.startingUses)});
+    setEditing(item.id); setModal(true);
+  }
+  function save() {
+    if(!form.name.trim()||!form.price||!form.targetCpu) return;
+    const item = {
+      ...form,
+      price:        parseFloat(form.price)||0,
+      targetCpu:    parseFloat(form.targetCpu)||0,
+      startingUses: parseInt(form.startingUses)||0,
+      loggedUses:   editing ? (gear.find(g => g.id===editing)?.loggedUses||0) : 0,
+    };
+    if(editing) setGear(gear.map(g => g.id===editing ? {...g,...item} : g));
+    else        setGear([...gear,{...item,id:"gr"+Date.now(),addedAt:todayStr()}]);
+    setModal(false);
+  }
+  function logUse(id) {
+    setGear(gear.map(g => g.id===id ? {...g,loggedUses:(g.loggedUses||0)+1,lastUsed:todayStr()} : g));
+  }
+  function undoUse(id) {
+    setGear(gear.map(g => g.id===id ? {...g,loggedUses:Math.max(0,(g.loggedUses||0)-1)} : g));
+  }
+  function del(id) { setGear(gear.filter(g => g.id!==id)); setModal(false); }
+
+  function cpu(item) {
+    const total = (item.startingUses||0) + (item.loggedUses||0);
+    return total > 0 ? item.price / total : item.price;
+  }
+  function usesNeeded(item) {
+    if(item.targetCpu<=0) return null;
+    return Math.ceil(item.price / item.targetCpu);
+  }
+  function usesToGoal(item) {
+    const total   = (item.startingUses||0) + (item.loggedUses||0);
+    const needed  = usesNeeded(item);
+    if(needed===null) return null;
+    return Math.max(0, needed - total);
+  }
+  function progress(item) {
+    const current = cpu(item);
+    if(current <= item.targetCpu) return 1;
+    const worst = item.price;
+    const best  = item.targetCpu;
+    if(worst<=best) return 1;
+    return Math.min(1, Math.max(0, (worst - current) / (worst - best)));
+  }
+
+  const totalInvested   = gear.reduce((a,g) => a+g.price, 0);
+  const totalLoggedUses = gear.reduce((a,g) => a+(g.loggedUses||0), 0);
+  const atGoalCount     = gear.filter(g => cpu(g)<=g.targetCpu).length;
+  const curSymbol       = gear[0]?.currency || "£";
+  const sorted          = [...gear].sort((a,b) => progress(b)-progress(a));
+
+  return (
+    <div style={{padding:"16px 16px 90px"}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:16}}>
+        {[
+          {l:"Total invested",  v:`${curSymbol}${totalInvested.toFixed(0)}`, c:SLATE.accent},
+          {l:"Uses logged",     v:totalLoggedUses,                            c:SLATE.green},
+          {l:"At goal",         v:`${atGoalCount}/${gear.length}`,            c:SLATE.mastered},
+        ].map(s => (
+          <div key={s.l} style={{background:"#fff",borderRadius:10,border:`1px solid ${SLATE.border}`,padding:"10px 8px",textAlign:"center"}}>
+            <div style={{fontSize:18,fontWeight:300,color:s.c,fontFamily:"'Jost'"}}>{s.v}</div>
+            <div style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.muted,marginTop:2}}>{s.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {gear.length===0 && (
+        <div style={{textAlign:"center",padding:"40px 20px",color:SLATE.muted,fontFamily:"'Jost'",fontSize:13,lineHeight:1.8}}>
+          No equipment yet.<br/>Add your first item — IPL device, steam iron, stand mixer…<br/>
+          <span style={{fontSize:11,color:SLATE.mutedLight}}>Every use makes it cheaper. Track it and commit.</span>
+        </div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {sorted.map(item => {
+          const currentCpu = cpu(item);
+          const atGoal     = currentCpu <= item.targetCpu;
+          const prog       = progress(item);
+          const remaining  = usesToGoal(item);
+          const totalUses  = (item.startingUses||0) + (item.loggedUses||0);
+          return (
+            <div key={item.id} style={{background:"#fff",borderRadius:12,border:`1px solid ${atGoal?SLATE.greenPale:SLATE.border}`,padding:"14px 14px 12px",transition:"border-color 0.3s"}}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
+                <div style={{fontSize:26,lineHeight:1,flexShrink:0}}>{item.emoji}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:15,fontWeight:400,color:SLATE.dark,lineHeight:1.2}}>{item.name}</div>
+                  <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap",alignItems:"center"}}>
+                    <span style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted}}>{item.currency}{item.price.toFixed(2)} paid</span>
+                    <span style={{color:SLATE.border}}>·</span>
+                    <span style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted}}>goal: {item.currency}{item.targetCpu.toFixed(2)}/use</span>
+                    {item.lastUsed && <span style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.mutedLight}}>last used {fmtDate(item.lastUsed)}</span>}
+                  </div>
+                </div>
+                <button className="btn" onClick={() => openEdit(item)} style={{fontSize:13,color:SLATE.muted,flexShrink:0,padding:"2px"}}>✏️</button>
+              </div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                <div>
+                  <span style={{fontFamily:"'Jost'",fontSize:22,fontWeight:300,color:atGoal?SLATE.mastered:SLATE.accent}}>{item.currency}{currentCpu.toFixed(2)}</span>
+                  <span style={{fontFamily:"'Jost'",fontSize:11,color:SLATE.muted}}> / use</span>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  {atGoal
+                    ? <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.mastered}}>✦ Goal reached!</div>
+                    : remaining!==null && <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted}}>{remaining} more use{remaining!==1?"s":""} to goal</div>
+                  }
+                  <div style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.mutedLight,marginTop:1}}>
+                    {totalUses} total use{totalUses!==1?"s":""}
+                    {item.startingUses>0 ? ` (${item.startingUses} existing)` : ""}
+                  </div>
+                </div>
+              </div>
+              <div style={{height:6,background:SLATE.accentPale,borderRadius:3,overflow:"hidden",marginBottom:10}}>
+                <div style={{height:"100%",width:`${prog*100}%`,background:atGoal?`linear-gradient(90deg,${SLATE.mastered},${SLATE.green})`:`linear-gradient(90deg,${SLATE.accent},${SLATE.accentLight})`,borderRadius:3,transition:"width 0.5s ease"}} />
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <button className="btn" onClick={() => undoUse(item.id)}
+                  style={{width:32,height:32,borderRadius:"50%",border:`1px solid ${SLATE.border}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:SLATE.muted,lineHeight:1,flexShrink:0}}>
+                  −
+                </button>
+                <button className="btn" onClick={() => logUse(item.id)}
+                  style={{flex:1,padding:"8px",borderRadius:8,background:atGoal?SLATE.greenPale:SLATE.accentPale,border:`1px solid ${atGoal?SLATE.green:SLATE.accent}`,fontFamily:"'Jost'",fontSize:12,fontWeight:500,color:atGoal?SLATE.mastered:SLATE.accent}}>
+                  + Log a use {atGoal?"✦":""}
+                </button>
+                <div style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.mutedLight,textAlign:"right",flexShrink:0,minWidth:36}}>
+                  {item.loggedUses||0}<br/>logged
+                </div>
+              </div>
+              {item.notes && <div style={{fontFamily:"'Jost'",fontSize:11,color:SLATE.muted,marginTop:8,lineHeight:1.4,fontStyle:"italic"}}>{item.notes}</div>}
+            </div>
+          );
+        })}
+      </div>
+
+      <button className="btn" onClick={openAdd}
+        style={{position:"fixed",bottom:24,right:18,width:48,height:48,borderRadius:"50%",background:`linear-gradient(135deg,${SLATE.accent},${SLATE.accentLight})`,color:"#fff",fontSize:20,boxShadow:`0 4px 16px ${SLATE.accent}60`,display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>
+        +
+      </button>
+
+      {modal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(10,12,16,0.75)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+          <div style={{background:SLATE.bg,borderRadius:16,padding:22,width:"100%",maxWidth:430,boxShadow:"0 20px 50px rgba(0,0,0,0.3)",maxHeight:"92vh",overflowY:"auto"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <h2 style={{fontSize:19,fontWeight:400,color:SLATE.dark}}>{editing?"Edit item":"Add equipment"}</h2>
+              <button className="btn" onClick={() => setModal(false)} style={{fontSize:22,color:SLATE.muted}}>×</button>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{display:"flex",gap:8}}>
+                <input value={form.emoji} onChange={e => setForm(p => ({...p,emoji:e.target.value}))} style={{width:50,padding:"9px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:18,textAlign:"center",background:"#fff"}} />
+                <input value={form.name} onChange={e => setForm(p => ({...p,name:e.target.value}))} placeholder="Item name e.g. Philips Lumea IPL *" style={{flex:1,padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:13,background:"#fff",color:SLATE.dark}} />
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <select value={form.currency} onChange={e => setForm(p => ({...p,currency:e.target.value}))} style={{width:60,padding:"9px 4px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:13,background:"#fff",color:SLATE.dark,textAlign:"center"}}>
+                  {CURRENCIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+                <input type="number" min="0" step="0.01" value={form.price} onChange={e => setForm(p => ({...p,price:e.target.value}))} placeholder="Purchase price *" style={{flex:1,padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:13,background:"#fff",color:SLATE.dark}} />
+              </div>
+              <div>
+                <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted,marginBottom:4}}>Target cost per use ({form.currency}) *</div>
+                <input type="number" min="0" step="0.01" value={form.targetCpu} onChange={e => setForm(p => ({...p,targetCpu:e.target.value}))} placeholder={`e.g. 0.50 means ${form.currency}0.50 per use is your goal`} style={{width:"100%",padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:13,background:"#fff",color:SLATE.dark}} />
+                {form.price && form.targetCpu && parseFloat(form.targetCpu)>0 && (
+                  <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.accent,marginTop:4}}>
+                    → You need {Math.ceil(parseFloat(form.price)/parseFloat(form.targetCpu))} total uses to reach your goal
+                  </div>
+                )}
+              </div>
+              <div>
+                <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted,marginBottom:4}}>Starting uses (for items you already own &amp; have used)</div>
+                <input type="number" min="0" step="1" value={form.startingUses} onChange={e => setForm(p => ({...p,startingUses:e.target.value}))} placeholder="0" style={{width:"100%",padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:13,background:"#fff",color:SLATE.dark}} />
+                <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.mutedLight,marginTop:3}}>These count toward your goal but are shown separately from new logged uses.</div>
+              </div>
+              <div>
+                <div style={{fontFamily:"'Jost'",fontSize:10,color:SLATE.muted,marginBottom:4}}>Date purchased (optional)</div>
+                <input type="date" value={form.purchaseDate} onChange={e => setForm(p => ({...p,purchaseDate:e.target.value}))} style={{width:"100%",padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:12,background:"#fff",color:SLATE.dark}} />
+              </div>
+              <textarea value={form.notes} onChange={e => setForm(p => ({...p,notes:e.target.value}))} placeholder="Notes e.g. bought on sale, use weekly" rows={2} style={{width:"100%",padding:"9px 11px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontSize:12,background:"#fff",color:SLATE.dark,resize:"vertical",fontFamily:"'Jost'"}} />
+            </div>
+            <div style={{display:"flex",gap:8,marginTop:16}}>
+              {editing && (
+                <button className="btn" onClick={() => del(editing)} style={{padding:"10px 12px",border:`1px solid ${SLATE.danger}30`,borderRadius:8,fontFamily:"'Jost'",fontSize:11,color:SLATE.danger,background:SLATE.rosePale}}>Delete</button>
+              )}
+              <button className="btn" onClick={() => setModal(false)} style={{flex:1,padding:"10px",border:`1px solid ${SLATE.border}`,borderRadius:8,fontFamily:"'Jost'",fontSize:12,color:SLATE.muted}}>Cancel</button>
+              <button className="btn" onClick={save} style={{flex:2,padding:"10px",background:SLATE.accent,borderRadius:8,color:"#fff",fontFamily:"'Jost'",fontSize:12,fontWeight:500}}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── ROOT APP ─────────────────────────────────────────────────
+function App() {
+  const [world,     setWorld]     = useState("rituals");
+  const [hqTab,     setHqTab]     = useState("habits");
+  const [dataModal, setDataModal] = useState(false);
+  const [loading,   setLoading]   = useState(true);
+
+  const [rd,setRd] = useState(null); const [rc,setRc] = useState([]); const [re,setRe] = useState({});
+  const [hd,setHd] = useState(null); const [hc,setHc] = useState([]); const [he,setHe] = useState({});
+  const [backlog,setBacklog] = useState([]);
+  const [gear,setGear]       = useState([]);
+
+  const rt = useRef(null); const ht = useRef(null);
+
+  useEffect(() => {
+    const a=cGet(SK.rd), b=cGet(SK.rc), c=cGet(SK.re);
+    const d=cGet(SK.hd), e=cGet(SK.hc), f=cGet(SK.he);
+    const g=cGet(SK.backlog), h=cGet(SK.gear);
+    setRd(a||emptyData()); setRc(b||[]); setRe(c||{});
+    setHd(d||emptyData()); setHc(e||[]); setHe(f||{});
+    setBacklog(g||[]); setGear(h||[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    if(!rd) return;
+    const allH = [...RITUALS.map(h => re[h.id] ? {...h,...re[h.id]} : h),...rc];
+    let changed=false; const d = {...rd,mastered:{...rd.mastered}};
+    allH.forEach(h => { if(d.mastered[h.id]) return; const{cur,tgt}=masteryProg(d.checks,h); if(cur>=tgt){d.mastered[h.id]=todayStr();changed=true;} });
+    if(changed) { setRd(d); clearTimeout(rt.current); rt.current=setTimeout(() => cSet(SK.rd,d),800); }
+  }, [rd?.checks]);
+
+  useEffect(() => {
+    if(!hd) return;
+    const allH = [...HQ.map(h => he[h.id] ? {...h,...he[h.id]} : h),...hc];
+    let changed=false; const d = {...hd,mastered:{...hd.mastered}};
+    allH.forEach(h => { if(d.mastered[h.id]) return; const{cur,tgt}=masteryProg(d.checks,h); if(cur>=tgt){d.mastered[h.id]=todayStr();changed=true;} });
+    if(changed) { setHd(d); clearTimeout(ht.current); ht.current=setTimeout(() => cSet(SK.hd,d),800); }
+  }, [hd?.checks]);
+
+  const pR  = v => { setRd(v); clearTimeout(rt.current); rt.current=setTimeout(() => cSet(SK.rd,v),800); };
+  const pRC = v => { setRc(v); cSet(SK.rc,v); };
+  const pRE = v => { setRe(v); cSet(SK.re,v); };
+  const pH  = v => { setHd(v); clearTimeout(ht.current); ht.current=setTimeout(() => cSet(SK.hd,v),800); };
+  const pHC = v => { setHc(v); cSet(SK.hc,v); };
+  const pHE = v => { setHe(v); cSet(SK.he,v); };
+  const pBl = v => { setBacklog(v); cSet(SK.backlog,v); };
+  const pGr = v => { setGear(v);    cSet(SK.gear,v);    };
+
+  function handleImport(p) {
+    pR(p.rd||emptyData()); pRC(p.rc||[]); pRE(p.re||{});
+    pH(p.hd||emptyData()); pHC(p.hc||[]); pHE(p.he||{});
+    pBl(p.backlog||[]); pGr(p.gear||[]);
+  }
+
+  if(loading||!rd||!hd) return (
+    <div style={{fontFamily:"'Jost',sans-serif",background:"#f4f6f9",minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12,color:"#6a7585"}}>
+      <div style={{fontSize:30}}>✦</div>
+      <div style={{fontSize:12,letterSpacing:"0.12em"}}>Loading your life…</div>
+    </div>
+  );
+
+  const C   = world==="rituals" ? GOLD : SLATE;
+  const isR = world==="rituals";
+  const mergedR = [...RITUALS.map(h => re[h.id] ? {...h,...re[h.id]} : h),...rc];
+  const mergedH = [...HQ.map(h => he[h.id] ? {...h,...he[h.id]} : h),...hc];
+  const rDone = mergedR.filter(h => h.freq==="daily" && rd.checks[dkey(h,todayStr())]).length;
+  const rTot  = mergedR.filter(h => h.freq==="daily").length;
+  const hDone = mergedH.filter(h => h.freq==="daily" && hd.checks[dkey(h,todayStr())]).length;
+  const hTot  = mergedH.filter(h => h.freq==="daily").length;
+  const hqTabs = [{id:"habits",l:"Habits",i:"📋"},{id:"backlog",l:"Backlog",i:"🗃️"},{id:"gear",l:"Cost/Use",i:"⚙️"}];
+
+  return (
+    <div style={{fontFamily:"'Cormorant Garamond',Georgia,serif",background:C.bg,minHeight:"100vh",maxWidth:880,margin:"0 auto"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0;}
+        .btn{cursor:pointer;border:none;background:none;font-family:inherit;}
+        .row{transition:background 0.1s;cursor:pointer;}
+        .row:hover{background:rgba(0,0,0,0.02);}
+        input,select,textarea{font-family:'Jost',sans-serif;outline:none;}
+        ::-webkit-scrollbar{width:3px;height:3px;}
+        ::-webkit-scrollbar-thumb{background:#c8cdd8;border-radius:2px;}
+      `}</style>
+
+      <div style={{background:`linear-gradient(135deg,${C.dark} 0%,${C.dark2} 60%,${C.dark3} 100%)`,padding:"18px 18px 0",position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+          <div>
+            <div style={{fontFamily:"'Jost'",fontSize:9,letterSpacing:"0.3em",color:C.accent,textTransform:"uppercase",marginBottom:4}}>
+              {isR ? "Beauty & Wellbeing" : "Life & Wealth"}
+            </div>
+            <h1 style={{fontSize:21,fontWeight:300,color:"#fafafa"}}>
+              {isR ? "My Rituals" : "Life HQ"} <em style={{color:C.accent}}>{isR?"✦":"◆"}</em>
+            </h1>
+            <div style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight,marginTop:3,display:"flex",alignItems:"center",gap:5}}>
+              <span style={{width:5,height:5,borderRadius:"50%",background:"#7a9e87",display:"inline-block"}} />
+              Saved to your Claude account
+            </div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <button className="btn" onClick={() => setDataModal(true)} style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight,background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:6,padding:"3px 9px",marginBottom:5,display:"block",marginLeft:"auto"}}>
+              ⬇ backup
+            </button>
+            <div style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight}}>Daily today</div>
+            <div style={{fontSize:21,fontWeight:300,color:"#fafafa"}}>
+              {isR?rDone:hDone}<span style={{fontSize:12,color:C.mutedLight}}>/{isR?rTot:hTot}</span>
+            </div>
+          </div>
+        </div>
+        <div style={{display:"flex"}}>
+          {[{id:"rituals",l:"✦ Rituals",sub:`${rDone}/${rTot}`},{id:"hq",l:"◆ Life HQ",sub:`${hDone}/${hTot}`}].map(w => (
+            <button key={w.id} className="btn" onClick={() => setWorld(w.id)}
+              style={{flex:1,padding:"8px 8px 9px",background:world===w.id?"rgba(255,255,255,0.1)":"transparent",borderBottom:world===w.id?`2px solid ${C.accent}`:"2px solid transparent",color:world===w.id?"#fafafa":C.mutedLight,fontFamily:"'Jost'",fontSize:10,letterSpacing:"0.04em",borderRadius:"6px 6px 0 0"}}>
+              <div>{w.l}</div>
+              <div style={{fontSize:9,marginTop:1,opacity:.6}}>{w.sub} today</div>
+            </button>
+          ))}
+        </div>
+        {!isR && (
+          <div style={{display:"flex",background:"rgba(0,0,0,0.16)"}}>
+            {hqTabs.map(t => (
+              <button key={t.id} className="btn" onClick={() => setHqTab(t.id)}
+                style={{flex:1,padding:"6px 4px 8px",background:hqTab===t.id?"rgba(255,255,255,0.08)":"transparent",borderBottom:hqTab===t.id?`2px solid ${SLATE.accentLight}`:"2px solid transparent",color:hqTab===t.id?SLATE.accentLight:SLATE.mutedLight,fontFamily:"'Jost'",fontSize:9,letterSpacing:"0.05em"}}>
+                <div style={{fontSize:13}}>{t.i}</div>
+                <div style={{marginTop:1}}>{t.l}</div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {isR && (
+        <HabitWorld key="r" HABITS={RITUALS} data={rd} customHabits={rc} habitEdits={re} persist={pR} persistCustom={pRC} persistEdits={pRE} C={GOLD} worldId="r" />
+      )}
+      {!isR && hqTab==="habits" && (
+        <HabitWorld key="h" HABITS={HQ} data={hd} customHabits={hc} habitEdits={he} persist={pH} persistCustom={pHC} persistEdits={pHE} C={SLATE} worldId="h" />
+      )}
+      {!isR && hqTab==="backlog" && (
+        <BacklogTracker backlog={backlog} setBacklog={pBl} />
+      )}
+      {!isR && hqTab==="gear" && (
+        <CostPerUseTracker gear={gear} setGear={pGr} />
+      )}
+
+      {dataModal && (
+        <DataModal state={{rd,rc,re,hd,hc,he,backlog,gear}} onImport={handleImport} onClose={() => setDataModal(false)} />
+      )}
+    </div>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
