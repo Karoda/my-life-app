@@ -1,8 +1,18 @@
 {
-  "rd": null,
+  "rd": {
+    "checks": {
+      "d01__2026-06-16": true
+    },
+    "mastered": {},
+    "startDate": "2026-06-16"
+  },
   "rc": [],
   "re": {},
-  "hd": null,
+  "hd": {
+    "checks": {},
+    "mastered": {},
+    "startDate": "2026-06-16"
+  },
   "hc": [],
   "he": {},
   "backlog": [],
