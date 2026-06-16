@@ -17,6 +17,17 @@
   },
   "hc": [],
   "he": {},
-  "backlog": [],
+  "backlog": [
+    {
+      "title": "A bo ja wiem???",
+      "category": "Magazines",
+      "totalCount": 1,
+      "readCount": 0,
+      "removedCount": 0,
+      "notes": "",
+      "id": "bl1781610982746",
+      "addedAt": "2026-06-16"
+    }
+  ],
   "gear": []
 }
