@@ -29,5 +29,19 @@
       "addedAt": "2026-06-16"
     }
   ],
-  "gear": []
+  "gear": [
+    {
+      "name": "Lumea!",
+      "emoji": "🔌",
+      "price": 300,
+      "targetCpu": 1,
+      "startingUses": 20,
+      "purchaseDate": "",
+      "notes": "",
+      "currency": "zł",
+      "loggedUses": 0,
+      "id": "gr1781611054806",
+      "addedAt": "2026-06-16"
+    }
+  ]
 }
