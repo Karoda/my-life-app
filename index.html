@@ -1405,34 +1405,56 @@ function saveToken(t) { localStorage.setItem(TOKEN_KEY, t); }
 
 async function ghLoad() {
   const token = getToken();
-  if(!token) return null;
+  if(!token) return { _status: "notoken" };
   try {
     const r = await fetch(GH_API, {
       headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" }
     });
-    if(!r.ok) return null;
+    if(r.status === 404) return { _status: "empty" };  // file doesn't exist yet — first use
+    if(r.status === 401 || r.status === 403) return { _status: "autherror" };
+    if(!r.ok) return { _status: "error" };
     const j = await r.json();
-    const decoded = JSON.parse(atob(j.content.replace(/\n/g,"")));
+    // Unicode-safe decode
+    const b64 = j.content.replace(/\n/g,"");
+    const binary = atob(b64);
+    const bytes2 = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes2[i]=binary.charCodeAt(i);
+    const decoded = JSON.parse(new TextDecoder().decode(bytes2));
     decoded._sha = j.sha;
+    decoded._status = "ok";
     return decoded;
-  } catch { return null; }
+  } catch { return { _status: "error" }; }
 }
 
 async function ghSave(data) {
   const token = getToken();
   if(!token) return false;
   try {
-    // Get current SHA first (needed for update)
-    let sha = data._sha;
-    if(!sha) {
-      const r = await fetch(GH_API, {
-        headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" }
-      });
-      if(r.ok) { const j = await r.json(); sha = j.sha; }
+    const clean = Object.fromEntries(Object.entries(data).filter(([k]) => !k.startsWith('_')));
+    // Use TextEncoder for safe Unicode/emoji handling
+    const jsonStr = JSON.stringify(clean, null, 2);
+    const bytes = new TextEncoder().encode(jsonStr);
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    const encoded = btoa(binary);
+
+    // Always fetch the latest SHA before writing — avoids stale SHA conflicts
+    let sha = null;
+    const check = await fetch(GH_API, {
+      headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" }
+    });
+    if(check.ok) {
+      const j = await check.json();
+      sha = j.sha; // file exists — we need its SHA to update
+    } else if(check.status === 404) {
+      sha = null; // file doesn't exist yet — create it (no SHA needed)
+    } else if(check.status === 401 || check.status === 403) {
+      return { error: check.status };
     }
-    const clean = Object.fromEntries(Object.entries(data).filter(([k]) => k !== '_sha'));
-    const body = { message: `sync ${new Date().toISOString()}`, content: btoa(unescape(encodeURIComponent(JSON.stringify(clean, null, 2)))) };
+
+    const body = { message: `sync ${new Date().toISOString()}`, content: encoded };
     if(sha) body.sha = sha;
+
     const r = await fetch(GH_API, {
       method: "PUT",
       headers: { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json", "Content-Type": "application/json" },
@@ -1442,8 +1464,9 @@ async function ghSave(data) {
       const j = await r.json();
       return j.content?.sha || true;
     }
-    return false;
-  } catch { return false; }
+    const errBody = await r.json().catch(()=>({}));
+    return { error: r.status, message: errBody.message || "" };
+  } catch(e) { return { error: "network", message: e.message }; }
 }
 
 
@@ -1453,17 +1476,32 @@ function GitHubSetupModal({onClose}) {
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState(null); // null | 'ok' | 'fail'
 
+  const [debugMsg, setDebugMsg] = useState("");
+
   async function testAndSave() {
     if(!token.trim()) return;
-    setTesting(true); setStatus(null);
+    setTesting(true); setStatus(null); setDebugMsg("");
     saveToken(token.trim());
-    const result = await ghLoad();
-    setTesting(false);
-    if(result !== null || true) {
-      // Even null is ok on first use (file doesn't exist yet)
-      setStatus('ok');
-      setTimeout(onClose, 1200);
-    } else {
+    try {
+      const url = `https://api.github.com/repos/${GH_USER}/${GH_REPO}`;
+      const r = await fetch(url, {
+        headers: { Authorization: `token ${token.trim()}`, Accept: "application/vnd.github.v3+json" }
+      });
+      setTesting(false);
+      if(r.ok) {
+        const repoData = await r.json();
+        setDebugMsg(`✓ Repo found: ${repoData.full_name}`);
+        setStatus('ok');
+        setTimeout(() => { onClose(); window.location.reload(); }, 1800);
+      } else {
+        const body = await r.json().catch(()=>({}));
+        setDebugMsg(`HTTP ${r.status}: ${body.message||"unknown error"}`);
+        if(r.status===401||r.status===403) setStatus('authfail');
+        else setStatus('fail');
+      }
+    } catch(e) {
+      setTesting(false);
+      setDebugMsg(`Network error: ${e.message}`);
       setStatus('fail');
     }
   }
@@ -1475,10 +1513,13 @@ function GitHubSetupModal({onClose}) {
           <span style={{fontSize:24}}>🔗</span>
           <h2 style={{fontSize:20,fontWeight:400}}>GitHub Sync Setup</h2>
         </div>
-        <p style={{fontFamily:"'Jost'",fontSize:12,color:"#6a7585",marginBottom:18,lineHeight:1.6}}>
+        <p style={{fontFamily:"'Jost'",fontSize:12,color:"#6a7585",marginBottom:10,lineHeight:1.6}}>
           Your data will auto-save to <strong style={{color:"#141820"}}>karoda/my-life-app</strong> on GitHub
           and load automatically on any device. Paste your Personal Access Token below.
         </p>
+        <div style={{background:"#fffbeb",borderRadius:7,padding:"8px 12px",marginBottom:14,fontFamily:"'Jost'",fontSize:11,color:"#92741a",lineHeight:1.5}}>
+          ⚠ Make sure you are using the app from <strong>https://karoda.github.io/my-life-app/</strong> — not from a downloaded file. GitHub's API blocks requests from local files.
+        </div>
         <div style={{background:"#f4f6f9",borderRadius:8,padding:"10px 14px",marginBottom:14,fontFamily:"'Jost'",fontSize:11,color:"#6a7585",lineHeight:1.6}}>
           <strong style={{color:"#141820"}}>How to get your token:</strong><br/>
           GitHub → Settings → Developer Settings → Personal Access Tokens → Tokens (classic) → Generate new token → tick <strong>repo</strong> scope → copy it here.
@@ -1490,8 +1531,10 @@ function GitHubSetupModal({onClose}) {
           placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
           style={{width:"100%",padding:"10px 12px",border:"1px solid #d8dde8",borderRadius:8,fontFamily:"'Jost'",fontSize:13,marginBottom:12,background:"#fff",color:"#141820"}}
         />
-        {status==='ok'  && <div style={{fontFamily:"'Jost'",fontSize:11,color:"#4a7a8a",background:"#e4f0f0",padding:"7px 11px",borderRadius:7,marginBottom:12}}>✓ Connected! Syncing now…</div>}
-        {status==='fail'&& <div style={{fontFamily:"'Jost'",fontSize:11,color:"#9a4a4a",background:"#f0e4e4",padding:"7px 11px",borderRadius:7,marginBottom:12}}>✕ Connection failed — check your token has <strong>repo</strong> scope.</div>}
+        {status==='ok'      && <div style={{fontFamily:"'Jost'",fontSize:11,color:"#4a7a8a",background:"#e4f0f0",padding:"7px 11px",borderRadius:7,marginBottom:12}}>✓ Connected successfully! Reloading…</div>}
+        {status==='authfail' && <div style={{fontFamily:"'Jost'",fontSize:11,color:"#9a4a4a",background:"#f0e4e4",padding:"7px 11px",borderRadius:7,marginBottom:12}}>✕ Token rejected — make sure it has <strong>repo</strong> scope and hasn't expired.</div>}
+        {status==='fail'     && <div style={{fontFamily:"'Jost'",fontSize:11,color:"#9a4a4a",background:"#f0e4e4",padding:"7px 11px",borderRadius:7,marginBottom:12}}>✕ Could not reach GitHub — check your internet connection.</div>}
+        {debugMsg && <div style={{fontFamily:"monospace",fontSize:10,color:"#6a7585",background:"#edf0f5",padding:"6px 10px",borderRadius:6,marginBottom:8,wordBreak:"break-all"}}>{debugMsg}</div>}
         <div style={{display:"flex",gap:10}}>
           <button className="btn" onClick={onClose} style={{flex:1,padding:"10px",border:"1px solid #d8dde8",borderRadius:8,fontFamily:"'Jost'",fontSize:12,color:"#6a7585"}}>Skip for now</button>
           <button className="btn" onClick={testAndSave} disabled={testing||!token.trim()}
@@ -1512,12 +1555,14 @@ function GitHubSetupModal({onClose}) {
 function SyncDot({status}) {
   // status: 'idle' | 'saving' | 'saved' | 'error' | 'notoken'
   const cfg = {
-    idle:    {color:"#7a9e87", label:"Synced"},
-    saving:  {color:"#d4af6a", label:"Saving…"},
-    saved:   {color:"#7a9e87", label:"Saved ✓"},
-    error:   {color:"#c08080", label:"Sync error"},
-    notoken: {color:"#9aa5b5", label:"Local only"},
-    loading: {color:"#9aa5b5", label:"Loading…"},
+    idle:      {color:"#7a9e87", label:"Synced"},
+    saving:    {color:"#d4af6a", label:"Saving…"},
+    saved:     {color:"#7a9e87", label:"Saved ✓"},
+    error:     {color:"#c08080", label:"Offline — using local"},
+    autherror: {color:"#c08080", label:"Token error"},
+    notoken:   {color:"#9aa5b5", label:"Local only"},
+    firstuse:  {color:"#7a9aba", label:"Ready — start using!"},
+    loading:   {color:"#9aa5b5", label:"Loading…"},
   }[status] || {color:"#9aa5b5", label:""};
   return (
     <div style={{display:"flex",alignItems:"center",gap:5,cursor:status==="notoken"?"pointer":"default"}}>
@@ -1547,25 +1592,39 @@ function App() {
   useEffect(() => {
     (async () => {
       const token = getToken();
-      if(token) {
-        setSyncStatus("loading");
-        const remote = await ghLoad();
-        if(remote) {
-          // Use remote data — it's the source of truth
-          setGhSha(remote._sha || null);
-          setRd(remote.rd||emptyData()); setRc(remote.rc||[]); setRe(remote.re||{});
-          setHd(remote.hd||emptyData()); setHc(remote.hc||[]); setHe(remote.he||{});
-          setBacklog(remote.backlog||[]); setGear(remote.gear||[]);
-          // Also update localStorage as local cache
-          Object.entries(remote).forEach(([k,v]) => { if(k!=='_sha') cSet(k,v); });
-          setSyncStatus("idle");
-          setLoading(false);
-          return;
-        }
-        // Remote load failed — fall through to localStorage
-        setSyncStatus("error");
-      } else {
+      setSyncStatus("loading");
+      const remote = await ghLoad();
+      const status = remote?._status;
+
+      if(status === "notoken") {
         setSyncStatus("notoken");
+      } else if(status === "autherror") {
+        setSyncStatus("autherror");
+      } else if(status === "empty") {
+        // File doesn't exist yet — save initial empty data to create it now
+        setSyncStatus("saving");
+        const initData = {
+          rd: emptyData(), rc: [], re: {},
+          hd: emptyData(), hc: [], he: {},
+          backlog: [], gear: []
+        };
+        const result = await ghSave(initData);
+        if(result && typeof result === 'string') { setGhSha(result); setSyncStatus("idle"); }
+        else if(result === true)                 { setSyncStatus("idle"); }
+        else                                     { setSyncStatus("error"); }
+      } else if(status === "ok") {
+        // Load remote data — source of truth
+        setGhSha(remote._sha || null);
+        setRd(remote.rd||emptyData()); setRc(remote.rc||[]); setRe(remote.re||{});
+        setHd(remote.hd||emptyData()); setHc(remote.hc||[]); setHe(remote.he||{});
+        setBacklog(remote.backlog||[]); setGear(remote.gear||[]);
+        Object.entries(remote).forEach(([k,v]) => { if(!k.startsWith('_')) cSet(k,v); });
+        setSyncStatus("idle");
+        setLoading(false);
+        return;
+      } else {
+        // Network error — use local cache, warn user
+        setSyncStatus("error");
       }
       // Fall back to localStorage
       const a=cGet(SK.rd), b=cGet(SK.rc), c=cGet(SK.re);
@@ -1601,11 +1660,16 @@ function App() {
     setSyncStatus("saving");
     clearTimeout(ghTimer.current);
     ghTimer.current = setTimeout(async () => {
-      const newSha = await ghSave({...state, _sha: ghSha});
-      if(newSha) {
-        if(typeof newSha === 'string') setGhSha(newSha);
+      const result = await ghSave(state); // ghSave fetches fresh SHA internally
+      if(result && typeof result === 'string') {
+        setGhSha(result);
         setSyncStatus("saved");
         setTimeout(() => setSyncStatus("idle"), 2000);
+      } else if(result === true) {
+        setSyncStatus("saved");
+        setTimeout(() => setSyncStatus("idle"), 2000);
+      } else if(result && result.error === 401 || result?.error === 403) {
+        setSyncStatus("autherror");
       } else {
         setSyncStatus("error");
       }
@@ -1668,8 +1732,10 @@ function App() {
             </h1>
             <div style={{fontFamily:"'Jost'",fontSize:9,color:C.mutedLight,marginTop:3,display:"flex",alignItems:"center",gap:8}}>
               <SyncDot status={syncStatus}/>
-              {syncStatus==="notoken" && (
-                <button className="btn" onClick={()=>setGhSetup(true)} style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.accent,textDecoration:"underline"}}>Connect GitHub</button>
+              {(syncStatus==="notoken" || syncStatus==="autherror") && (
+                <button className="btn" onClick={()=>setGhSetup(true)} style={{fontFamily:"'Jost'",fontSize:9,color:SLATE.accent,textDecoration:"underline"}}>
+                  {syncStatus==="autherror" ? "Fix token" : "Connect GitHub"}
+                </button>
               )}
             </div>
           </div>
